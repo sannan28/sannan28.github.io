@@ -37,8 +37,15 @@
 	 step2: cd /Users/lishengnan/.ssh/,  进入该目录下复制 id_rsa_pub文件中的内容到github的Deploy keys中。
 	 step3： ssh -T git@github.com. 使用该命令检验密匙是否生效。
 	     遇到的问题 因为之前应该是绑定过github的密匙，所以在 /Users/lishengnan/.ssh/known_hosts 路径中存在github相关的密匙，重新生成生效的前提需要把这个历史的密匙删除即可。
-	 step4: 本地idea拉取 github上的项目 在导引界面 check out from git 然后在拿到gothub上项目的链接地址 https://github.com/sannan28/gulimall.git 	     
-
+	 step4: 本地idea拉取 github上的项目 在导引界面 check out from git 然后在拿到gothub上项目的链接地址 https://github.com/sannan28/gulimall.git。
+	     遇到的问题 更新完密匙从github上引入项目 会要求输入登录信息 目前github应该是需要使用token来验证的 账户密码已经无效了。
+	          解决的方式：就是登录到github账号，然后选择个人头像-->setting-->Developer settings，后面使用生成的token来登录即可。
+             遇到的问题 在idea中引入从githu拉取下来的项目 无法引入的问题
+	          解决方式：暂时是绕过去的 直接使用的git命令来解决的。
+              提交代码
+	         
+	          
+ 
 	 
 	 
 	 
