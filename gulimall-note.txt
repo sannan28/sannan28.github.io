@@ -33,6 +33,7 @@
    11. 配置前端环境 首先是安装Visual Studio code 安装插件[auto close tag,auto rename tag,chinese, eslint,html css support,html snippets,JavaScript,javascript es6,live server,open in browser,vetur]
    12. 将本地代码推送到gihub上：
          记录一下 github的密码 id_rsa.pub Yy135手机号 哈哈哈
+	         github 账户名/密码 sannan.li token token在备忘录 哈哈哈
          step1: ssh-keygen -t rsa -C "sannan_li@163.com", 通过github绑定的邮箱生成密匙
 	 step2: cd /Users/lishengnan/.ssh/,  进入该目录下复制 id_rsa_pub文件中的内容到github的Deploy keys中。
 	 step3： ssh -T git@github.com. 使用该命令检验密匙是否生效。
