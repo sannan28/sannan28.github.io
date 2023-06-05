@@ -11,8 +11,8 @@
    5.查看linix所有版本信息的命令：lsb_release -a
    6.查看linux内核的版本：uname -r
    7.按照官网指定的教程安装docker engine，两种方式 一种是从docker的存储库安装：https://docs.docker.com/engine/install/centos/#install-using-the-repository
-                                                                        一种是使用rpm的存储库安装：https://docs.docker.com/engine/install/centos/
-   8. 学习中遗留的问题：如何拓展服务所需要的内存。
+                                             一种是使用rpm的存储库安装：https://docs.docker.com/engine/install/centos/
+   8. 学习中遗留的问题：如何拓展服务所需要的内存。？？？
    9.docker安装mysql:8.0.33
         创建实例的命令 ：
             docker run --name mysql-8.0.33 -p 3306:3306 \
@@ -26,8 +26,38 @@
                              挂载的内容 如果是和conf相关的最好还是复制一下。不然启动还是会报错。
                              外网想访问docker中的mysql 还要把对应的用户ip开放打开
            mysql配置文件的内容 这个可以参考官网给出的内容进行取舍。
-   10.在docker中安装redis
+   10.在docker中安装redis 7.2-rc2
        创建实例的命令：
            docker run --name redis-7.2-rc2 -p 6379:6379 -v /root/docker-mount/redis-7.2-rc2/conf/redis.conf:/etc/redis/redis.conf -v /root/docker-mount/redis-7.2-rc2/data:/data --restart=always -d docker.io/library/redis:7.2-rc2 redis-server /etc/redis/redis.conf
          注意点：就是redis需要以redis.conf的形式启动，所以可以到官网找到默认的配置文件 链接：https://redis.io/docs/management/config/。7.0的redis 配置文件地址 https://raw.githubusercontent.com/redis/redis/7.0/redis.conf
-   
+   11. 配置前端环境 首先是安装Visual Studio code 安装插件[auto close tag,auto rename tag,chinese, eslint,html css support,html snippets,JavaScript,javascript es6,live server,open in browser,vetur]
+   12. 将本地代码推送到gihub上：
+         记录一下 github的密码 Yy135手机号 哈哈哈
+         step1: ssh-keygen -t rsa -C "sannan_li@163.com", 通过github绑定的邮箱生成密匙
+	 step2: cd /Users/lishengnan/.ssh/,  进入该目录下复制 id_rsa_pub文件中的内容到github的Deploy keys中。
+	 step3： ssh -T git@github.com. 使用该命令检验密匙是否生效。
+	     遇到的问题 因为之前应该是绑定过github的密匙，所以在 /Users/lishengnan/.ssh/known_hosts 路径中存在github相关的密匙，重新生成生效的前提需要把这个历史的密匙删除即可。
+	 step4: 本地idea拉取 github上的项目 在导引界面 check out from git 然后在拿到gothub上项目的链接地址 https://github.com/sannan28/gulimall.git 	     
+
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
