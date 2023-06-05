@@ -1,0 +1,33 @@
+谷粒商城学习笔记
+   1.开机自启动docker：systemctl enable docker
+
+   2.给docker配置阿里云的镜像加速器 网址：https://cr.console.aliyun.com/cn-qingdao/instances/mirrors
+        例如：在docker desktop的docker engine添加镜像地址
+             "registry-mirrors": [
+                        "https://9aezid17.mirror.aliyuncs.com"
+                  ]
+   3.关于docker下挂载mysql的命令
+   4.关于docker下挂载redis的命令  
+   5.查看linix所有版本信息的命令：lsb_release -a
+   6.查看linux内核的版本：uname -r
+   7.按照官网指定的教程安装docker engine，两种方式 一种是从docker的存储库安装：https://docs.docker.com/engine/install/centos/#install-using-the-repository
+                                                                        一种是使用rpm的存储库安装：https://docs.docker.com/engine/install/centos/
+   8. 学习中遗留的问题：如何拓展服务所需要的内存。
+   9.docker安装mysql:8.0.33
+        创建实例的命令 ：
+            docker run --name mysql-8.0.33 -p 3306:3306 \
+	            -e MYSQL_ROOT_PASSWORD=root \
+	            -v /root/docker-mount/mysql-8.0.33/conf/mysql:/etc/mysql \    # 一定要注意和配置相关的挂载点问题
+	            -v /root/docker-mount/mysql-8.0.33/log:/var/log/mysql \
+	            -v /root/docker-mount/mysql-8.0.33/lib:/var/lib/mysql \
+              --restart=always \
+              -d docker.io/library/mysql:8.0.33
+              遇到的问题：首先是使用的云服务器是阿里云 所以一定要使用安全组检查下端口是否开放
+                             挂载的内容 如果是和conf相关的最好还是复制一下。不然启动还是会报错。
+                             外网想访问docker中的mysql 还要把对应的用户ip开放打开
+           mysql配置文件的内容 这个可以参考官网给出的内容进行取舍。
+   10.在docker中安装redis
+       创建实例的命令：
+           docker run --name redis-7.2-rc2 -p 6379:6379 -v /root/docker-mount/redis-7.2-rc2/conf/redis.conf:/etc/redis/redis.conf -v /root/docker-mount/redis-7.2-rc2/data:/data --restart=always -d docker.io/library/redis:7.2-rc2 redis-server /etc/redis/redis.conf
+         注意点：就是redis需要以redis.conf的形式启动，所以可以到官网找到默认的配置文件 链接：https://redis.io/docs/management/config/。7.0的redis 配置文件地址 https://raw.githubusercontent.com/redis/redis/7.0/redis.conf
+   
