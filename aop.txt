@@ -1,0 +1,171 @@
+AOP
+
+写在前面 说明下aop的术语：
+       1.advice(通知)：就是你想在原理方法上增强的方法 比如像是事务 缓存 日志等内容
+       2.JoinPoint(连接点)：就是被增强方法的前 后 或者抛出异常的位置也是可以的， spring只支持方法连接点。
+       3.PointCut(切入点)：在连接点的基础上，来定义切入点，你一个类里面有15个方法，那就有几十个连接点了吧，但是你并不想在所有方法附近都使用通知(织入)，你只想使用其中几个那就定义切点来定义这个几个方法，让切点来筛选连接点，选中你想要的那几个方法。
+           关于@pointcut
+             a. executionu主要用于指定方法的执行 格式：execution(<修饰符模式>?<返回类型模式><方法名模式>(<参数模式>)<异常模式>?)
+                 除了返回类型模式、方法模式、和参数模式以外，其他都是可选项。
+                 示例：
+                     方法
+                     execution(public * *(..)) 说明：匹配所有目标类的public方法第一个*代表的方法方法的返回值类型，第二个*代表方法名称，而”..”代表任意入参是的方法。
+                     execution(* *TO(..)) 说明：匹配目标类所有以TO结尾的方法，第一*代表任意方法返回的类型，而*TO代表任意以TO结尾的方法名。
+                     类
+                     execution(* com.taotao.Waiter.*(..)) 说明：第一*代表返回任意类型 第二个*代表返回Waiter接口中的所有方法。
+                     execution(* com.taotao.Waiter+.*(..)) 说明： 匹配所有Waiter接口及其所有实现的方法
+                     包
+                     execution(* com.taotao.*(..)) 说明：匹配com.taotao包下的所有方法
+                     execution(* com.taotao..*(..)) 说明：匹配com.taotao及其子孙包下所有类的所有方法，例如 com.taotao.user.dao,com.taotao.user.service等包下的所有方法。
+                     exection(* com..*.Dao.find*(..)) 说明：匹配包名以com开头，以Dao为后缀的类 并且方法名以find前缀，例如 com.taotao.dao.UserDao.findById,
+                        com.test.dao.findByName()的方法都是匹配的节点
+                     方法入参定义切点
+                      execution(* joke(String,int)) 说明：匹配类中joke()方法，且第一参数是String类型，第二个参数为int类型。
+                      execution(* joke(String, ..))   说明：匹配目标类中joke()方法，且第一个参数是String 类型的，第二个参数是任意类型的且不限个数。
+
+            b.within：用于匹配指定类型。匹配类型的任意方法，不能匹配接口。 
+                格式：within(匹配目标类，省略时匹配任意类型)
+                示例：
+                   within(com.taotao.dao.*) 说明：匹配dao包下的类
+                   within(com.taotao.dao..*) 说明：匹配dao包及其子包的类
+                   within(com.taotao.dao.UserDaoImpl) 说明：匹配com.taotao.dao.UserDaoImpl类
+
+           c.this：匹配代理对象实例的类型，匹配在运行时对象的类型 注意：基于jdk动态代理实现的aop，this不能匹配接口的实现类，因为代理类和实现类并不是同一种类型
+               格式：this(匹配目标类，省略时匹配任意类型)
+               示例：
+                    this(com.taotao.service.*) 说明：匹配代理对象类型为service包下的类。
+                    this(com.taotao.service..*) 说明：匹配代理对象类型为service包及其子包下的类。
+                    this(com.taotao.service.UserServiceImpl) 说明：匹配代理对象类型为UserServiceImpl的类。
+
+          d.target: 匹配目标对象实例的类型,匹配aop被代理对象的类型
+               格式：target(匹配目标类，省略时匹配任意类型)
+               示例：
+                    target(com.taotao.service.*) 说明：匹配目标对象类型为service包下的类。
+                    target(com.taotao.service..*) 说明：匹配目标对象类型为service包及其子包下的类。
+                    target(com.taotao.service.UserServiceImpl) 说明：匹配目标对象类型为UserServiceImpl的类。
+
+           三种表达式匹配范围如下：
+                表达式匹配范围            within               this          target
+                        接口                          x                      y               y
+                   实现接口的类                 y                     x                y
+                 不实现接口的类               y                      y                y
+
+          e.args：匹配方法参数类型和数量，参数类型可以为指定类型及其子类，注意：使用execution表达式参数时，不能匹配参数类型为子类型的方法。
+                 格式：args(匹配参数类型和数量)
+                              () 匹配没有参数的方法
+                              (..) 匹配有任意数量参数的方法
+                              (*) 匹配有一个任意类型参数的方法
+                              (*,String) 匹配有两个参数的方法，并且第一个为任意类型，第二个为 String 类型
+                 示例：
+                     args(java.io.Serializable) 说明：匹配参数只有一个且为Serializable类型（或实现Serializable接口的类）
+                     args(cn.codeartist.spring.aop.pointcut.Example,..) 说明：匹配参数个数至少有一个且为第一个为Example类型（或实现Example接口的类）
+
+          f. bean：通过bean的id或名称匹配，支持*匹配
+                 格式：bean(bean-name)
+                 示例：
+                     bean(*Service) 说明：匹配名称以Service结尾的bean。
+                     bean(DemoServiceImpl) 说明：匹配名称为DemoServiceImpl的bean。
+          g.@within 匹配
+
+          
+       4.Aspect(切面)切面就是通知和切点的结合，其实没连接点什么事情，连接点的出现其实就是为了 辅助你可以更好的理解切入点，通知说明干什么和什么时候干(before,after,around)，而切入点说明了在哪干(指定到底是哪个方法)。
+       5.引入(introduction)：允许我们向像现有的类添加新的方法属性。这个就是把切面(也就是新方法属性：通知定义的)用到目标类中么。
+       6.代理(Proxy)：怎么实现aop机制的，都是通过aop代理的方式，
+       7.织入(weaving)：把切面应用到目标对象来创建新的代理对象过程，3种方式,spring采用的是运行时，关键呢就是切点定义了哪里会接收到通知。
+      
+        
+
+1.AOP是什么？
+     是一种编程范式，不是编程语言，可以解决特定好的问题，不能解决所有问题，是oop的补充，不是替代。
+2.AOP的设计初衷？
+     DRY：don’t  repeat yourself  不要写重复的代码。
+     SOC：Sepration of Concerns 
+          水平分离：展示层->服务层->持久层
+          垂直分离：模块划分(订单，库存等)
+          切面分离：分离功能性需求与非功能性需求
+                
+  3.使用AOP的好处？
+       集中处理某一关注点/横切逻辑
+       可以很方便的添加/删除关注点 
+       侵入性少，增强代码的可读性及可维护性
+
+4.AOP的应用场景
+    权限控制 缓存控制 事务控制 审计日志 性能监控 分布式追踪 异常处理
+
+5.
+    a.匹配对象
+       // 匹配aop对象的目标对象为指定类型的方法，即demodao的aop代理对象的方法
+       @Pointcut(“this(com.test.DemoDao)”)
+       public void thisDemo(){}
+
+      // 匹配实现IDAO接口的目标对象(而不是aop代理后的对象)的方法，即demodao的方法
+       @Pointcut(“target(com.test.IDao)”)
+       public void targetDemo(){}
+
+      // 匹配所有以Service结尾的bean里面的方法
+       @Pointcut(“bean(*Service)”)
+       public void beanDemo(){}
+
+    b.匹配参数
+
+       // 匹配任何以find开头而且只有一个Long参数的方法
+       @Pointcut(“execution(**..find*(Long))”)
+       public void argsDemo(){}
+
+      // 匹配任何以只有一个Long参数的方法
+       @Pointcut(“args(Long)”)
+       public void argsDemo(){}
+
+       // 匹配任何以find开头而且第一个参数为Long型方法
+       @Pointcut(“execution(**..find*(Long,..))”)
+       public void argsDemo(){}
+
+       // 匹配第一个参数为Long型方法
+       @Pointcut(“args(Long,..)”)
+       public void argsDemo(){}
+
+    c.注解匹配
+       // 匹配方法标有AdminOnly的注解方法
+       @Pointcut(“@annotation(com.test.demo.AdminOnly)”)
+        public void annotationDemo(){}
+
+       // 匹配方法标有Beat的类底下的方法，要求annotation的retenionPolicy级别为class
+       @Pointcut(“@within(com.test.demo.annotations.Beat)”)
+        public void annotationDemo(){}
+
+       // 匹配方法标有Repository的类底下的方法，要求annotation的retenionPolicy级别为runtime
+       @Pointcut(“@target(com.test.demo.annotations.Repository)”)
+        public void annotationDemo(){}
+
+       // 匹配传入的参数类标有Repository注解的方法
+       @Pointcut(“@args(com.test.demo.annotations.Repository)”)
+        public void annotationDemo(){}
+
+
+  6.5种Advice：
+     1：@Before，前置通知；
+     2：@After(finally),后置通知，方法执行完成之后；
+     3：@AfterReturning，返回通知，成功执行之后执行；
+     4：@AfterThrowing，异常通知，抛出异常之后执行
+     5：@Around，环绕通知，环绕着方法执行；
+
+AOP原理
+    静态代理
+           优点：实现简单，不侵入原代码
+           缺点：
+                要求: 代理对象与被代理对象都需要实现一致的接口，因此当希望一个代理类代理多个被代理类时,一般有两种方式：
+                     1.如果只维护一个代理类，由这个代理类去实现多个接口，这样就导致代理类过于庞大。
+                     2.新建多个代理类，每个目标对象对应一个代理类，但是这样也会产生多个代理类。
+                当接口需要增加，删除，修改方法的时候，目标对象与代理类都要同时修改，不容易维护。
+     动态代理包含两种
+              1.基于jdk自带的动态代理
+                  jdk的动态代理只能针对有接口的类的接口方法进行动态代理。
+              2.基于cglib的动态代理
+                  cglib的动态代理基于继承来实现代理，无法对static final类进行代理；也无法对private，static方法进行代理。
+
+     SpringAOP 是如何实现的呢？
+        如果目标对象实现了接口，则默认还是再用JDK动态代理
+        如果目标对象没有实现接口，则采用cglib进行动态代理。
+        如果目标对象实现了接口，且强制cglib代理，则使用cglib代理，强制使用cglib代理的注解 @EnableAspectJAutoProxy(proxyTargetClass=true)
+
+     Spring如何链式调用(主要采用的就是责任链模式实现的)
