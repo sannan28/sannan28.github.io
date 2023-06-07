@@ -1,0 +1,318 @@
+// 按量付费
+var PAY_TYPE_PAY_AS_YOU_GO = 'PayAsYouGo';
+
+function getPrice(inputJsonStr) {
+	var input = JSON.parse(inputJsonStr);
+	// 计费方式
+	var payment = input['payment'];
+	// 操作以及操作参数
+	var operation = input['operation'];
+	var operationParameters = input['operationParameters'];
+	// 资源基本信息
+	var resource = input['resource'];
+	// 云平台信息
+	var cloudEntry = input['cloudEntry'];
+	switch (operation) {
+		case 'provision_bp':
+			input.result = provision(cloudEntry, resource, payment, operationParameters);
+			break;
+		default:
+			throw 'operation:' + operation + " is not supported";
+	}
+	return JSON.stringify(input);
+}
+
+function provision(cloudEntry, resource, payment, operationParameters) {
+	var flavor = operationParameters['flavorId'];
+	var priceDictionary = initPriceDictionaryForProvision(cloudEntry, resource, payment, operationParameters);
+	return {
+		size: 1,
+		total: priceDictionary[flavor].total,
+		details: priceDictionary[flavor].details
+	};
+}
+
+
+function initPriceDictionaryForProvision(cloudEntry, resource, payment, operationParameters) {
+	// 公有云询价函数
+	var initPublicCloudPriceDictFunc = function(cloudEntry, resource, payment, params) {
+		var priceDict = {};
+        
+        var regionId = params['regionId'];
+        var zoneId = params['zone'];
+		var flavorId = params['flavorId'];
+        var diskSize = params['diskSize'];
+        var diskType = params['diskVolumeType'];
+        var templateId = params['templateId'];
+        var validateProvisionParameters = function (params) {
+             if (!params['regionId']) {
+                throw 'parameter:regionId is illegal';
+            }
+             if (!params['zone']) {
+                throw 'parameter:zoneId is illegal';
+            }
+            if (!params['flavorId']) {
+                throw 'parameter:flavorId is illegal';
+            }
+            if (!params['diskSize']) {
+                throw 'parameter:diskSize is illegal';
+            }
+            if (!params['diskVolumeType']) {
+                throw 'parameter:diskVolumeType is illegal';
+            }
+            if (!params['templateId']) {
+                throw 'parameter:templateId is illegal';
+            }
+        };
+        // 验证参数
+        validateProvisionParameters(params);
+
+        // 挂载的磁盘列表
+        var disks = params["disks"].map(function (val) {
+            return {
+                "type": 'DATA_DISK',
+                "storageTypeId": val['diskVolumeType'],
+                "size": val['diskSize'] * 1024 * 1024 * 1024
+            }
+        });
+        disks.push({
+            "type": 'SYSTEM_DISK',
+            "storageTypeId": diskType,
+            "size": diskSize * 1024 * 1024 * 1024
+        });
+
+		// 构造询价参数
+        var priceQueryParams = {
+            "region": regionId,
+            "zone": zoneId,
+            "template":templateId,
+            "flavor": flavorId,
+            "disks": disks,
+            "allocatePublicIP": params["allocatePublicIP"],
+            "bandwidth": params["ecsBandwidth"],
+            'internetChargeType': params['ecsInternetChargeType'],
+            'resourceBundleId': params['resourceBundleId'],
+            'cloudEntryId': params['cloudEntryId'],
+            'osType': params['nodeType'] === 'cloudchef.nodes.Compute' ? 'linux' : 'windows',
+            'payPeriod': payment.payPeriod,
+            "vpcId": params['vpcId']
+        };
+		if (isPayAsYouGo(payment)) {
+			var priceObj = getECSPayAsYouGoPrice(priceQueryParams);
+
+			var details = [{
+				'price': priceObj.details.instancePrice.unitPriceDiscount,
+				'moduleCode': 'InstanceType',
+				'moduleUnit': 'Hour',
+				"productCode": 'compute',
+				"payType": payment.payType,
+				"resourceType": params['nodeType']
+			}, {
+				'price': priceObj.details.bandwidthPrice.unitPriceDiscount,
+				'moduleCode': 'InternetMaxBandwidthOut',
+				'moduleUnit': priceObj.details.instancePrice.chargeUnit,
+				"productCode": 'compute',
+				"payType": payment.payType,
+				"resourceType": params['nodeType']
+			}];
+			
+			priceDict[flavorId] = {
+				"total": priceObj.total / 60.0,
+				"details": details
+			};
+		} else {
+			var priceObj = getECSSubscriptionPrice(priceQueryParams);
+			var details = priceObj.details.map(function(val) {
+				var moduleCode = 'InstanceType';
+				if (val === bandwidthPrice) {
+					moduleCode = 'InternetMaxBandwidthOut';
+				}
+				return {
+					'price': val['UnitPriceDiscount'],
+					'moduleCode': val['moduleCode'],
+					'moduleUnit': 'Month',
+					"productCode": 'compute',
+					"payType": payment.payType,
+					"resourceType": params['nodeType']
+				};
+			});
+			priceDict[flavorId] = {
+				total: priceObj.total,
+				details: details
+			};
+		}
+		return priceDict;
+	};
+
+	return initPublicCloudPriceDictFunc(cloudEntry, resource, payment, operationParameters);
+}
+
+
+/**
+ * 获取ECS按量付费单价
+ * @param params 询价参数
+ * @returns {number|*}
+ */
+function getECSPayAsYouGoPrice(params) {
+
+	var Placement = {"Zone": params.zone};
+	var region = params.region;
+	var ImageId = params.template;
+	var InstanceType = params.flavor ;
+    var SystemDisk={};
+    var DataDisks=[];
+
+    if (params.disks) {
+        params.disks.forEach(function (val) {
+            var diskSize = val.size / (1024 * 1024 * 1024);
+            var diskCategory = val['storageTypeId'];
+            var diskType = val['type'];
+            if (diskType === 'SYSTEM_DISK') {
+                SystemDisk = {
+                    "DiskType": diskCategory,
+                    "DiskSize": diskSize
+                    
+                };
+            } else {
+                DataDisks.push({
+                    "DiskType": diskCategory,
+                    "DiskSize":diskSize
+                })
+            }
+        })
+    }
+	var InternetAccessible = {
+		"InternetChargeType": "BANDWIDTH_POSTPAID_BY_HOUR",
+		"InternetMaxBandwidthOut": 1,
+		"PublicIpAssigned": true
+	};
+
+	// 请求对象
+	var requestBody = {
+		'Placement': Placement,
+		'region': region,
+		'ImageId': ImageId,
+		'InstanceType': InstanceType,
+		'InstanceChargeType': 'POSTPAID_BY_HOUR',
+		'SystemDisk': SystemDisk,
+		'DataDisks': DataDisks,
+		'InternetAccessible': InternetAccessible
+	};
+	var inquiryResult = queryCloudResourcePrice(params.cloudEntryId, 'PayAsYouGo', requestBody);
+	if (inquiryResult.status !== 'success') {
+		return 0;
+	}
+
+	var InstancePrice = inquiryResult.data.instancePrice;
+	var BandwidthPrice = inquiryResult.data.bandwidthPrice;
+	var totalPrice = (InstancePrice.unitPriceDiscount + BandwidthPrice.unitPriceDiscount).toFixed(4);
+
+	return {
+		"total": totalPrice,
+		"details": inquiryResult.data
+	}
+}
+
+/**
+ * 获取ECS包年包月单价
+ * @param params
+ * @returns {number|*} 包年包月价格
+ */
+function getECSSubscriptionPrice(params) {
+	var instanceTypeConfig;
+	if (params.family) {
+		instanceTypeConfig = "InstanceType:" + params.flavor + ",ImageOs:" + params.osType + ",InstanceTypeFamily:" + params.family;
+	} else {
+		instanceTypeConfig = "InstanceType:" + params.flavor + ",ImageOs:" + params.osType;
+	}
+
+	var moduleLists = [{
+		"moduleCode": "InstanceType",
+		"config": instanceTypeConfig
+	}];
+
+	// 磁盘模块
+	if (params.disks) {
+		params.disks.forEach(function(val) {
+			var diskSize = val.size / (1024 * 1024 * 1024);
+			var diskCategory = val['storageTypeId'];
+			var diskType = val['type'];
+			if (diskType === 'SYSTEM_DISK') {
+				moduleLists.push({
+					"moduleCode": "SystemDisk",
+					"config": "SystemDisk.Category:" + diskCategory + ",SystemDisk.Size:" + diskSize
+				});
+			} else {
+				moduleLists.push({
+					"moduleCode": "DataDisk",
+					"config": "DataDisk.Category:" + diskCategory + ",DataDisk.Size:" + diskSize
+				})
+			}
+		})
+	}
+
+	// 公网IP模块
+	if (params.allocatePublicIP) {
+		var flowType = params['internetChargeType'] === 'PayByBandwidth' ? 5 : 1;
+		moduleLists.push({
+			"moduleCode": "InternetMaxBandwidthOut",
+			"config": "InternetMaxBandwidthOut:" + (params.bandwidth * 1024) + ",InternetMaxBandwidthOut.IsFlowType:" + flowType + ",NetworkType:1",
+		});
+	}
+
+	//如果是配置了vpc网络
+	if (params.vpcId) {
+		moduleLists.push({
+			"moduleCode": "NetworkType",
+			"config": "NetworkType:1"
+		});
+	}
+
+	// 请求对象
+	var requestBody = {
+		'productCode': 'ecs',
+		'subscriptionType': 'Subscription',
+		'moduleLists': moduleLists,
+		'resourceBundleId': params.resourceBundleId,
+		'quantity': 1,
+		'servicePeriodQuantity': params.payPeriod,
+		'servicePeriodUnit': 'Month',
+		'orderType': params.orderType,
+		'instanceId': params.instanceId
+	};
+	var cloudResourcePrice = queryCloudResourcePrice(params.cloudEntryId, 'Subscription', requestBody);
+	if (cloudResourcePrice.status !== 'success') {
+		return 0;
+	}
+	var totalPrice = cloudResourcePrice.data.moduleDetails.reduce(function(prev, curr) {
+		return prev + curr['costAfterDiscount'];
+	}, 0);
+	return {
+		"total": totalPrice,
+		"details": cloudResourcePrice.data.moduleDetails
+	}
+}
+
+function queryCloudResourcePrice(cloudEntryId, payType, requestBody) {
+	var inquiryJavaClass = Java.type('io.cloudchef.yacmp.core.charge.expertmodel.ScriptParamsUtils');
+	var queryResultJson = inquiryJavaClass.inquiryOperationCost(cloudEntryId, payType, JSON.stringify(requestBody));
+	return JSON.parse(queryResultJson);
+}
+
+/**
+ * 是否是按量付费
+ * @param payment 计费方式
+ * @returns {boolean}
+ */
+function isPayAsYouGo(payment) {
+	return payment['payType'] === PAY_TYPE_PAY_AS_YOU_GO;
+}
+
+/**
+ * 获取部署周期
+ * @param payment
+ * @returns {*}
+ */
+function getPeriod(payment) {
+	return payment['payPeriod'];
+}
