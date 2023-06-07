@@ -1,0 +1,309 @@
+1.SpringCloud Gateway是什么？
+       官网的说法是：SpringCloud Gateway的一个全新的项目，主要是基于Spring 5.0+Spring Boot 2.0 和Project Reactor等技术开发的网关，目的是为微服务架构提供一种简单有效的统一的API
+路由管理方式。为了提高网关的性能，SpringCloud Gateway是基于WebFlux框架实现的，而webflux框架底层则使用了高性能的Reactor模式通信框架Netty。
+
+       “网关”这个词可能会让人联想到城门、海关之类的词，它的功能也正如名词一样，具有关卡的作用。在微服务生产的环境中，用户要调用微服务要经过网关。
+    
+    为什么微服务需要网关？
+         说明：想象一下服务场景，就有很多后端微服务，比如云自动化管理平台，云堡垒机，云持续交付平台，云监控告警平台，云费用分析平台，云itsm平台等等，那么这里呢就会有一个问题 app/Browser怎么去访问这些服务呢？如果业务比较简单的话，可以给每一个业务都分配一个独立的域名,但是这种方式就会存在几个主要的问题：
+
+        问题一: 每个业务都会需要鉴权、限流、权限校验等逻辑，如果每个业务都各自为战，自己造轮子实现一遍，会很蛋疼，完全可以提取出来。放到一个统一的地方去做。
+
+        问题二：如果业务量比较简单的话，这种方式前期不会有什么问题，但是随着公司的业务越来越复杂，比如像淘宝，亚马逊打开一个页面可能涉及到数百个微服务协同工作，如果每一个微服务都分配一个域名的话，一方面客户端的代码也会很难维护，涉及到数百个域名，另一个问题呢就是连接数的瓶颈，想象一下你打开一个app，通过抓包发现涉及到了数百个远程调用，这在移动端会显的非常低效。
+
+        问题三：每上线一个新的服务，都需要运维参与，申请域名、配置nginx等，当上线、下线、服务器的时，同样也需要运维参与，另外采取域名的这种方式，对于环境的隔离也不太好，调用者需要自己根据域名自己进行判断。
+
+         问题四：后端的每个服务可能是由不同语言编写的，采用了不同的协议，比如http、dubbo、gprc等，但是你也不可能要求客户端去适配这么多的协议，这也是一项非常有挑战的工作，项目也会变得非常复杂。
+    
+         问题五：后期如果要对微服务进行重构的话，也会变得非常的麻烦，需要客户端陪你一起进行改造，假如这个时候原来的一个服务模块业务变得复杂了,后期需要在做拆分，这个时候对外提供的服务也需要拆分成多个，同时也需要客户端配合你进行改造，非常蛋疼。   
+    
+           所以更好的方式是采用api网关，实现一个api网关接管所有的入口流量。类似于nginx的作用，将所有用户的请求转发给后端的服务器，但是网关做的不仅仅是转发，也会针对流量做一些扩展，比如鉴权、限流、熔断、协议转换、错误码统一、缓存、日志、监控、告警等。将这些通用的逻辑抽取出来，由网关统一去做，业务放也能更专注于业务逻辑，提升迭代效率。通过引入api网关，客户端只需要与api网关去做交互，而不用与各个业务方的接口分别通讯，但多引入一个组件就多引入了一个潜在的故障点，因此要实现一个高性能、稳定的网关，也会涉及到很多的点。    
+           
+             出了基本的四大功能以外呢，网关运行良好的环境还包括注册中心()。为了实现高性能，将数据全部都异构到缓存(如redis)中，同时还可以配合本地缓存来进一步提高网关系统的性能。为了提高网关的吞吐率，可以使用nio+servlet3异步的方式，还可以利用servlet3的异步特性将请求线程与业务线程分开，为后续的线程隔离做好基本的支撑。访问日志的存储我们可以放到hbase中，如果要作为开放网关使用，那么需要一个支持OAuth2.0授权中心。还可以引入nginx+lua的方式将一些基本的校验判断放到应用系统之上，这样就可以更轻量化的处理接入的问题
+
+        涉及点一：api注册详细的参考 https://zhuanlan.zhihu.com/p/511064893
+
+    2.api网关涵盖的基本功能
+        说明：一个api网关的基本功能包含了统一接入、协议适配、流量管理与容错、以及安全防护，这四大基本功能构成了网关的核心功能。网关的首要功能负责统一接入，然后将请求协议转换成内部的接口协议，在调用的过程中还要有限流、降级、熔断等容错的方式来保护网关的整体稳定，同时网关还要做到基本的安全防护(防刷控制)，以及黑白名单(比如IP白名单)等基本安全措施，
+
+
+    2. SpringCloud Gateway网关可以做什么？
+           反向代理(https://cloud.tencent.com/developer/article/1418457)，
+鉴权(验证用户是否拥有访问系统的权利)，
+流量控制(利用软件或硬件方式来实现对网络数据流量进行控制的一种措施)，
+熔断(过载保护机制;或者可以理解成：当下游服务因访问压力过大而响应变慢或失败，上游服务为了保护自己以及系统的整体可用性，可以暂时切断对下游服务的调用。)，
+日志监控。
+    3. SpringCloud Gateway具有特性：
+            动态路由：能够匹配任何请求属性；
+            可以对路由指定Predicate(断言)和Filter(过滤器)；
+            集成Hystrix的断路器功能；
+            集成SpringCloud服务发现功能；
+            易于编写的Predicate和Filter功能；
+            请求限流功能；
+            支持路径重写；
+           
+      和zuul对比：
+         zuul：
+            采用的是tomcat容器；
+            使用的传统的Servlet IO处理模型，说道这个点呢 就要微微提一下servlet的生命周期，servlet由servlet container进行生命周期的管理的，
+                   container启动的时构造servlet对象去调用servlet init()进行初始化。
+                   container运行接收请求的，会为每一个请求分配一个线程(一般会从线程池中获取空闲线程)然后调用service();
+                   container关闭时调用servlet destory()销毁servlet。
+             这个模型的存在一些缺点：
+                    servlet是一个简单的网络io模型，当请求进入到servlet container的时候 servlet container 就会为这个请求绑定一个线程，在并不高并发的场景下这中模型是适用的，
+                 但是一旦切换到高并发的场景，线程数量就会上涨，而线程的资源代价也是十分昂贵的(上下文切换,内存消耗大)严重影响请求的处理时间。在一些简单的业务场景下，不希望每个request请求分配一个线程，只需要1个或者几个线程就能应对极大的并发请求，这种场景下servlet没有优势。zuul 1.x采用的就是基于servlet之上的一个阻塞式处理模型，即spring实现了处理所有requst请求的一个servlet(DispatchServlet)并有该servlet阻塞式处理，所以spring cloud zuul 无法摆脱servlet模型的弊端。
+
+        gateway：高并发的场景下采用异步非阻塞的模型更适合。        
+
+    3.SpringCloud Gateway工作流程 
+        前置知识：
+            首先了解下SpringCloud Gateway的三大核心概念
+                    Route(路由)：构建网关的基本模块 主要是ID 目标URL，一系列的断言和过滤器组成，如果断言为true则匹配该路由。
+                    Predicate(断言)：开发人员可以匹配http请求中的所有内容  如果请求与断言相互匹配 就进行路由
+                    Filter(过滤)：指的是spring 框架中GatewayFilter的实例，使用过滤器，可以在请求被路由之前或者之后对请求进行修改。或者换一种说法
+                    总体：web请求，通过一些匹配条件，定位到真正的服务节点。并在这个转发过程前后,进行一些精细化控制， Predicate就是我们匹配的条件，Filter
+                就可以理解成一个无所不能的拦截器，有了这两个元素，在加上目标uri，就可以实现一个具体的路由了。
+                    核心内容就是：路由转发+执行过滤链。
+
+       关于filter的使用：路由过滤器可用于修改进入的http请求和返回的http响应，路由过滤器只能指定路由进行使用，springcloud gateway内置了多种路由过滤器，
+他们都由gatewayFilter的工厂类来生产。
+                  (1).客户端向springcloud gateway发出请求。
+                  (2).DispatcherHandler接收用户请求。
+                  (3).RoutePredicateHandlerMapping 进行路由选配。
+                  (4).如果网关处理程序发现请求与路由匹配，就会把请求发送到FilteringWebHandler(网关的处理程序)。
+                        如果发现请求与路由不匹配，就会把请求返给DispatcherHandler处理。
+                  (5).FilteringWebHandler通过特定的过滤器发送请求，先执行所有pre逻辑，然后进行代理请求，最后执行post逻辑。
+                  (6).FilteringWebHandler将请求转发到具体的服务中。
+                  (7).FilteringWebHandler把处理结果发给用户。
+  或者也可以这样阐述：
+                 (1).GatewayClient向GatewayServer发出请求。
+                 (2).请求首先会被HttpWebHandlerAdapter进行提取组转成网关上下文。
+                 (3).然后网关上下文会传递到DispatcherHandler，它将负责请求分发给RoutePredicateHandlerMapping。
+                 (4).RoutePredicateHandlerMapping负责路由查找，并根据路由断言判断路由是否可用。
+                 (5).如果断言成功，由FilteringWebHandler创建过滤链并调用。
+                 (6).请求会一次经过PreFilter—>微服务—>PostFilter的方法，最终返回响应。
+  4.GateWay常用的Predicate
+       springcloud gateway 将路由匹配作为Spring WebFlux HandlerMapping基础架构的一部分。springcloud gateway内置了很多的route predicate工厂，所有这些的predicate都与http请求的不同属性匹配，多个route predicate工厂可以进行组合。springcloud gateway 创建route对象的时候，使用的是routePredicatefactory创建predicate对象，predicate对象可以赋值给route。
+
+
+ 
+ 5.关于springcloud gateway源码
+     RouteDefinition类，这个类呢主要就是用来封装每个路由信息的 唯一id，predicates(List)，filters(List)，uri: 匹配后提供的服务地址， order排序，metadata(关于路由的超时内容等配置)
+     GatewayAutoConfiguration 类中：propertiesRouteDefinitionLocator 方法就是装配yaml文件中的配置的路由内容。
+              @Bean
+              @ConditionalOnMissingBean
+                public PropertiesRouteDefinitionLocator propertiesRouteDefinitionLocator(GatewayProperties properties) {
+                  return new PropertiesRouteDefinitionLocator(properties);
+              }
+这个类本身也实现了RouteDefinitionLocator，RouteDefinitionLocator本身就是路由的装载器，里面只有一个方法就是获取路由信息的。该接口有多个实现的类，分别对应不同的配置路由的方式。
+ 主要包含以下几种：
+        CachingRouteDefinitionLocator：缓存目标，RouteDefinitionLocator为routeDefinitions提供缓存功能
+        CompositeRouteDefinitionLocator：组合多种RouteDefinitionLocator的实现,为routeDefinitions提供统一的入口。
+        DiscoveryClientRouteDefinitionLocator：从注册中心 eg：eureka，consul，zookeeper，etcd等。
+        InMemoryRouteDefinitionRepository：
+        PropertiesRouteDefinitionLocator：从配置文件(gatewayproperties eg:yml,properties)读取RouteDefinition。
+        RouteDefinitionRepository：从存储器（eg：内存，redis，mysql）读取RouteDefinition。
+加载顺序大概就是先从CachingRouteDefinitionLocator中获取这个路由信息，不管发起什么请求,请求一次都会走一次。这个是将路由信息缓存到了map中，配置信息一旦请求过一次，就会被缓存到CachingRouteDefinitionLocator的类中，再次发起请求，会直接从map中获取。如果想动态的刷新配置信息，就需要发起一个refreshRoutesEvent的事件，CachingRouteDefinitionLocator会监听该事件，并重新拉去路由配置信息。
+ 在GatewayAutoConfiguration类中的
+  @Bean
+  @ConditionalOnMissingBean({RouteDefinitionRepository.class})
+   public InMemoryRouteDefinitionRepository     inMemoryRouteDefinitionRepository() {
+    return new InMemoryRouteDefinitionRepository();
+    }
+
+
+6.关于springcloud gateway在实际项目中的应用示例
+
+     1.限流
+        前置知识：
+                为什么要限流？
+                        一般而言，正常的流量越多越好，比如说用户快速增长，热点事件带来蜂拥的人流。但是在实际的网络流量中，除了正常的流量以外，还有很多的非正常流量，比如网络攻击，恶意爬虫(搜索引擎的爬虫会为业务带来好处，应该归为正常流量)
+                         网络攻击不会给业务带来好处，而是会过度地消耗服务资源，所以在高并发的应用中，需要通过限流来保障服务对所有用户的可用性。限流 缓存 降级一样的 都是保护高并发系统的利器。
+
+                 常见的限流措施：
+                       限制总的并发数，数据库连接池，线程池。  
+                       限制瞬时并发数，如nginx的limit_conn模块可以限制瞬时并发连接数。
+                       限制时间窗口内的平均速度。如nginx的limit_req模块。
+                       限制消息中间件的消费速度。
+                       限制远程接口调用速度。
+                       限制每秒的平均速率。
+                       对线程池进行隔离。如果超过线程池的负载，则进行熔断。
+                       通过tomcat容器限制线程数来控制并发。
+                   除了以上措施之外，我们还可以根据网络连接数，网络流量，时间窗口的平均速度，用户访问的频次，IP地址，uri，cpu和内存负载来做限流。
+                   一般限流都在网关层面实现，比如使用nginx，zuul，spring cloud gateway，openresty，kong等，当然也有人在应用层通过aop种方式限流。
+             
+             限流算法
+                常见的限流算法有，计数器算法，漏铜算法，令牌桶算法。
+
+                        计数器算法：
+                            采用计数器限流，是特别简单和粗暴的。
+                            算法的实现方式是：从第一个请求进来开始计时，再接下来的时间内(如1s)，每来一个请求，就把计数器+1，如果累加的数字达到了设定值(ops设置的是100)，，则后续的请求就会被全部拒绝；
+                         等单位时间结束后把计数器恢复成0，重新开始计数
+                             算法的缺点：存在“突刺现象”,如果在1s内的前100ms已经通过了100个请求，则后面的900ms内的请求全部会被拒绝。
+                             即便是通过减少 就是把单位时间设置的更短些也无法解决这个问题，设置为10ms。这种想法是可以的 ，但是依旧不能解决“突刺现象”，反而会增加计数器负担。为了解决“突刺现象”，可以采用更平滑的方式的限流算法：漏桶算法和令牌桶算法。
+
+                         漏桶算法(leaky bucket)：
+                              原理主要是：把请求先放到漏桶里等待，然后漏桶以一定的速度去处理进入到漏桶中的请求，如果请求的进入速度过大，就会导致漏桶漏桶装不下这些请求而拒绝后续的请求。主要的原理是漏桶算法里有两个变量(桶的大小，漏洞的大小)决定着限流的情况。一般情况下，用于服务的软硬件资源是特定的(漏桶的漏出速度是固定的)，所以即使是在理想的状态下(没有拥塞)，漏桶算法对于突发流量来说是缺乏效率的。
+                        
+                         令牌桶算法：令牌桶的算法(Token Bucket)和现在各大机构使用来叫号机很类似：当请求到达的时候，先去令牌桶(叫号机)中取得的一个令牌(排号)，然后等待响应。
+这样做的好处是：可以非常方便的改变速率，按需改变放入桶中的令牌速率；可以定时或者根据实时计算来增加令牌数量
+                           常见的令牌桶框架主要有RateLimiter ，Bucket4j，RateLimitJ。
+                
+         springcloud gateway实现的限流(代码实现)
+                 比较简单，主要就是编写响应的过滤器即可。
+                 本次的示例主要是关于ip地址限流
+                        场景：为了防止接口被恶意的访问，比如说有人通过jmeter工具频繁的访问我们的接口，导致接口响应变慢甚至崩溃，所以我们需要对一些特定的接口进行ip限流，即一定时间内同一个ip访问的次数是有限的。
+                        实现原理：用redis作为限流组件的核心原理：将用户的IP地址作为key，一段时间的访问次数为value，同时设置了该key的过期时间。
+                         例如：比如说我们某个接口设置相同ip 10内请求5次
+   
+            1.添加依赖
+                   
+
+         
+                                       
+                  
+          
+      示例：使用springcloud gateway 内置限流工厂实现限流
+       
+     2.可以进行流控(金丝雀发布，绿蓝发布)
+         现在很多公司都能实现不停机发布版本，在生产中同时存在新老版本的代码，很多事通过nginx来做的流量分流。发版时让流量都往老版本的服务走，等版本发布完之后在把流量慢慢切到新的版本去验证，这就是所谓的金丝雀发布或者说是红蓝发布，springcloudgateway呢主要就是应用的权重来实现的流控。
+         示例：
+             @Bean
+	      public RouteLocator blueGreenRoute(RouteLocatorBuilder builder){
+		   return builder.routes()
+				// 80%流量到老版本服务
+				.route(p -> p.weight("group1",8).and().path("/**")
+						.uri("http://httpbin.org:80"))
+				// 20%流量到新版本服务
+				.route(p -> p.weight("group1",2).and().path("/**")
+						.filters(f -> f.stripPrefix(1))
+						.uri("https://www.baidu.com"))
+				.build();
+	}
+         替换成配置文件的方式：
+         spring.cloud.gateway.routes[0].id = 
+         spring.cloud.gateway.routes[0].uri = http://httpbin.org:80
+         spring.cloud.gateway.routes[0].predicates[0] = Weight=group1,8
+         spring.cloud.gateway.routes[0].predicates[0] = Path=/**
+
+         spring.cloud.gateway.routes[1].id = 
+         spring.cloud.gateway.routes[1].uri =  https://www.baidu.com
+         spring.cloud.gateway.routes[1].Predicates[0] = Weight = group1,2
+         spring.cloud.gateway.routes[1].filters[0] = 
+
+      3.熔断
+          熔断发生在请求报错的时返回一个友好的提示信息给到用户，而不是异常堆栈信息。下面的示例代码，就是让头部带有name的请求路由到错误地址
+     ————————————————————————————————————————————————————————————————
+          // fallback，返回提示：请稍后再试
+	@Bean
+	public RouterFunction<ServerResponse> testFunRouterFunction() {
+		RouterFunction<ServerResponse> route = RouterFunctions.route(
+				RequestPredicates.path("/fallback"),
+				request -> ServerResponse.ok().body(BodyInserters.fromValue("请稍后再试")));
+		return route;
+	}
+
+	@Bean
+	public RouteLocator hystrixRoute(RouteLocatorBuilder builder){
+		return builder.routes()
+				.route(p -> p.header("name")
+						.filters(f -> f.hystrix((config -> config
+								.setName("mytest")
+						.setFallbackUri("forward:/fallback")))) // 熔断，如果访问报错则跳到/fallback
+				.uri("http://httpbin.org33:80"))
+				.build();
+	}
+
+
+     切换成配置文件的方式：
+     spring.cloud.gateway.routes[0].id = 
+     spring.cloud.gateway.routes[0].predicate[0] = Header=name
+     spring.cloud.gateway.routes[0].filters[0].name = mytest
+     spring.cloud.gateway.routes[0].filters[0].args.name = fallbackcmd
+     spring.cloud.gateway.routes[0].filters[0].args.fallbackUri = forward:/fallback
+     spring.cloud.gateway.routes[0].uri = http://httpbin.org33:80
+     ————————————————————————————————————————————————————————————————
+
+
+      4.黑名单控制
+         首先我们自己定义一个过滤器，检测请求头的id是否为黑名单的内容，如果在我们的过滤器里，就直接返回，不做路由转发。
+    ————————————————————————————————————————————————————————————————
+     public class BlackFilter implements GatewayFilter, Ordered {
+	  // 黑名单列表，也可以放在缓存数据库里
+	  List<String> blackList = Arrays.asList("123","456");
+
+	  @Override
+	  public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+		  // 用户id
+		  String id = exchange.getRequest().getHeaders().getFirst("id");
+		  if(blackList.contains(id)){
+			// 如果是黑名单就直接返回，不再往目标服务器转发
+			exchange.getResponse().setStatusCode(HttpStatus.NOT_ACCEPTABLE);
+			return exchange.getResponse().setComplete();
+		   }
+		 return chain.filter(exchange);
+	     }
+
+	   @Override
+	    public int getOrder() {
+		return 0;
+	    }
+         }
+
+            @Bean
+	    public RouteLocator blackRoute(RouteLocatorBuilder builder){
+		   return builder.routes()
+				.route(p -> p.path("/**")
+						.uri("http://httpbin.org:80").filters(new BlackFilter()))
+				.build();
+	}
+  ————————————————————————————————————————————————————————————————
+
+       5.日志记录 
+            请求的路径，入参和耗时日志是排查问题的重要信息，可以在网关上统一处理。下面的示例就是关于耗时的处理方面网关的应用
+            https://blog.csdn.net/Bballchen/article/details/115156800
+ 
+       6.用户鉴权
+          用户统一鉴权控制，是网关最常见的应用场景，下面模拟的情况是从cookie中获取token，然后用token验证用户是否已经登录。如果用户没有登录，则重定向到登录页面。示例
+public class MyAuthFilter implements GatewayFilter, Ordered {
+	@Override
+	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+		String token = null;
+		HttpCookie tokenCookie = exchange.getRequest().getCookies().getFirst("token");
+		if (tokenCookie != null) {
+			token = tokenCookie.getValue();
+		}
+		// 拿到token判断是否已经登录
+		if(!isLogin(token)){
+			// 如果没有登录则重定向都登录页面
+			exchange.getResponse().setStatusCode(HttpStatus.FOUND);
+			exchange.getResponse().getHeaders().set("Location", "/login");
+			return exchange.getResponse().setComplete();
+		}
+		return chain.filter(exchange);
+	}
+
+	private boolean isLogin(String token){
+		return false;
+	}
+	@Override
+	public int getOrder() {
+		return 0;
+	}
+	
+	@Bean
+	public RouterFunction<ServerResponse> testFunRouterFunction() {
+		RouterFunction<ServerResponse> route = RouterFunctions.route(
+				RequestPredicates.path("/login"),
+				request -> ServerResponse.ok().body(BodyInserters.fromValue("请登录系统")));
+		return route;
+	}
+
+	@Bean
+	public RouteLocator authRoute(RouteLocatorBuilder builder) {
+		return builder.routes()
+				.route(p -> p.path("/get")
+						.filters(f -> f.filter(new MyAuthFilter()))
+						.uri("http://httpbin.org:80"))
+				.build();
+	}
