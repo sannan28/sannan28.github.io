@@ -1,0 +1,159 @@
+docker ps                                                   查看所有正在运行的镜像
+
+docker stop 容器id                                    关闭容器
+
+docker inspect 容器ID                               查看容器的运行各种信息  用法示例
+
+docker pull redis                                       下载最新的镜像  镜像的版本需要到docker的官网是去看
+
+docker pull redis:6.2.4                              下载指定的镜像
+
+docker rmi 镜像名|镜像id                           删除镜像
+ 
+docker image rm -f  镜像id                       强制删除镜像
+
+docker ps -a                                              查看所有容器
+
+docker stop 容器名|容器id                         暂停容器
+
+docker start 容器名|容器id                        启动容器
+ 
+docker rm -f 容器id                                    删除容器
+
+docker update 容器名|容器id                    修改容器的启动配置参数
+
+docker inspect 容器id                                查看容器ip              
+
+docker exec -it 容器名|容器id /bin/bash   进入容器内部 并直接进入bash命令 进行命令操作
+
+docker commit -a ‘lsn’ -m ‘test’  镜像id 镜像版本名称  将镜像提交
+ -a   作者(auth)
+ -m  描述(comment)
+
+
+docker run —name = mynginx -d 
+说明：
+  --name 容器的别名
+           -d 设置后台运行
+  --restart = always 开机自动重新启动
+
+docker save -o 包名 镜像版本名称            将镜像保存成压缩包
+
+Docker load  -i  包名                                         别的机器加载这个镜像
+docker run --name myguacd -d -p 4822:4822 guacamole/guacd
+
+docker build -t sentinel-dashboard:1.8.5 .
+
+docker run --name sentinel-dashboard-1.8.5 --restart=always -p 8080:8080 -d sentinel-dashboard:1.8.5
+
+https://github.com/alibaba/Sentinel/releases/download/1.8.5/sentinel-dashboard-1.8.5.jar
+
+http://139.224.237.166:8848/
+
+
+docker run -p 8848:8848 --name nacostest -d nacos/nacos-server:v2.0.4
+
+docker run --name nacos-test -d -p 8848:8848 -p 9848-9849:9848-9849  nacos/nacos-server:v2.0.4
+
+
+nacos 启动命令 
+docker run -d \
+-e MODE=standalone \
+-e SPRING_DATASOURCE_PLATFORM=mysql \
+-e MYSQL_SERVICE_HOST=139.224.237.166 \
+-e MYSQL_SERVICE_PORT=3307 \
+-e MYSQL_SERVICE_USER=nacos \
+-e MYSQL_SERVICE_PASSWORD=nacos \
+-e MYSQL_SERVICE_DB_NAME=nacos \
+-e TIME_ZONE='Asia/Shanghai' \
+-v /Users/lishengnan/docker-mount/docker-nacos-2.0.4/logs:/home/nacos/logs \
+-v /Users/lishengnan/docker-mount/docker-nacos-2.0.4/conf:/home/nacos/conf \
+-p 8848:8848 \
+-p 9848-9849:9848-9849 \
+--name nacos \
+--restart=always \
+nacos/nacos-server:v2.0.4
+
+
+docker run --name nacos-server-2.0.4 -d -p 8848:8848 -p 9848-9849:9848-9849  nacos/nacos-server:v2.0.4
+
+docker run --name test -d -p 8848:8848 -p 9848-9849:9848-9849  nacos/nacos-server:v2.0.4
+
+docker cp test:/home/nacos/logs/ /Users/lishengnan/docker-mount/docker-nacos-2.0.4/
+docker cp test:/home/nacos/conf/ /Users/lishengnan/docker-mount/docker-nacos-2.0.4/
+
+
+
+docker run —name mysql-8.0.19 -d -p 3307:3306 mysql/mysql:8.0.19
+
+docker run --name mysql-8.0.1 -p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql/mysql:8.0.19
+
+
+create user 'nacos'@'%' identified by 'nacos';
+
+grant all privileges on *.* to 'nacos'@'%' identified by 'nacos';
+
+
+#再进行授权
+grant all privileges on *.* to 'nacos'@'%' with grant option;
+
+
+docker restart b1a4ce9903cb
+
+docker exec -it b1a4ce9903cb /bin/bash
+
+
+docker cp mysql-8.0.19:/etc/mysql/my.cnf /home/docker-mysql-8.0.19/conf
+
+
+docker run --name mysql-8.0.19 -p 3307:3306  -e MYSQL_ROOT_PASSWORD=root  -v /home/docker-mysql-8.0.19/conf/my.cnf:/etc/mysql/my.cnf  -v /home/docker-mysql-8.0.19/initdb/:/docker-entrypoint-initdb.d -v /home/docker-mysql-8.0.19/data:/var/lib/mysql  --restart=on-failure:3 -d mysql:8.0.19
+
+参考 https://blog.csdn.net/wzfgd/article/details/114751108 docker 中配置mysql  但是挂载无效 后续需要找找原因
+docker run --name mysql-8.0.19 -p 3307:3306 \
+	-e MYSQL_ROOT_PASSWORD=root \
+	-v /home/docker-mysql-8.0.19/conf/my.cnf:/etc/mysql/my.cnf \
+	-v /home/docker-mysql-8.0.19/initdb/:/docker-entrypoint-initdb.d/ \
+	-v /home/docker-mysql-8.0.19/data:/var/lib/mysql \
+	--restart=on-failure:3 -d mysql:8.0.19
+
+
+
+docker  exec -it mysql-8.0.19 /bin/bash
+docker exec -it mysql-8.0.19 /bin/bash
+
+139.224.237.166
+
+http://localhost:8002/test-gateway
+
+https://github.com/sannan28/sannan.github.io.git
+
+http://sannan28.github.io/sannan.github.io/
+
+
+mysql 在容器中对应的log日志位置： /var/log
+mysql在容器中对应的lib位置： /var/lib/mysql
+mysql在容器中对应的conf位置：/etc/mysql
+
+/Users/lishengnan/docker-mount/mysql/mysql8.0.33/log
+
+docker cp mysql:/etc/mysql/conf.d /Users/lishengnan/docker-mount/mysql/mysql8.0.33/conf
+
+
+
+docker run --name mysql-8.0.33 -p 3306:3306 \
+	-e MYSQL_ROOT_PASSWORD=root \
+	-v /Users/lishengnan/docker-mount/mysql/mysql8.0.33/conf:/etc/mysql/conf.d \
+	-v /Users/lishengnan/docker-mount/mysql/mysql8.0.33/log:/var/log \
+	-v /Users/lishengnan/docker-mount/mysql/mysql8.0.33/lib:/var/lib/mysql \
+        --restart always \
+        -d docker.io/library/mysql:8.0.33
+
+
+docker run \
+  -d \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=root \
+  --restart=always \
+  --privileged=true \
+  --name test \
+  docker.io/library/mysql:8.0.33
