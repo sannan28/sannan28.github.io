@@ -48,8 +48,24 @@
 		     先来说一下merge，merge是只两个及两个以上的commit对当前同一个分支的代码做了修改，所以两个commit会分别和分支最开始的未修改的代码做比较，如果两个commit其中有一个提交和原来代码没有变化，那就会直接合并，如果两个commit对比后都有变化，那就需要手动合并，解决冲突。
 		     在来说一下rebase，rebase在当前分支作修改提交的时候，会把其他commit的都撤销，然后先进行自己的commit，然后在添加别的commit。所以如果出现冲突可能要修改多次。 
  
- 13. 
-	          
+ 13.npm 设置阿里云镜像命令: npm config set registry https://registry.npmmirror.com 
+       查看阿里云镜像的命令: npm config get registry
+ 14. 问题 运行前端项目renren-fast-vue 出现的npm install 运行报错的问题 【read ECONNRESET at TLSWrap.onStreamRead (node:internal/stream_base_commons:217:20)】
+       临时的解决方式：
+          更新npm 发现使用命令升级npm无效，后面选择重现安装npm，记录一下在mac pro上卸载npm
+	     参考链接: https://www.imymac.com/zh-CN/powermymac/uninstall-node-mac.html 使用方法3成功卸载干净npm node
+	              https://blog.csdn.net/chenxiyuehh/article/details/108218312
+          在mac pro上安装 node 没想到如此简单 但还是要注意mac 本身的版本是否支持node.js。
+	  接在官网下载node的pkg包即可。这里记录一下安装的目录，官方最新版本下载：https://nodejs.org/en/download
+	       node.js v18.16.0 /usr/local/bin/node
+	       npm v9.5.1 /usr/local/bin/npm  安装这个版本的时候出现了兼容的问题 10.13.6的系统不能安装最新的需要 10.15以上才可以
+	        遇到的问题 首先就是本机系统和node.js不兼容的问题 历史版本的下载链接：https://nodejs.org/en/download/releases
+		    后面的安装的版本
+		        node.js v16.20.0 /usr/local/bin/node
+			npm 8.19.4 /usr/local/bin/npm
+			
+			
+       
  
 	 
 	 
