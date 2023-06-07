@@ -1,0 +1,43 @@
+1.license设计
+     主要用到的技术：AOP 注解方法的方式来处理的
+     业务流程：
+           license的设计 其实主要因为我们是做云管的 那么在使用我们的产品的时候 就需要通过license来进行产品功能,以及使用日期的控制，主要包含用户需要对接的云平台，以及购买时长，以及云平台的相关的资源cpu vm来对资源进行控制 
+            license统计有两种情况：
+                仅按照resource统计：那就是公有云资源和私有云资源数的和。
+                仅按照cpu来统计：那就是按照私有云占用的cpu数量。
+                同时按照resource和cpu统计的时候：私有云只统计cpu数量，对于公有云，可以同时使用cpu和resource来进行数量的统计。
+      
+           整个代码的实现就会用到aop切点表达式中的 方法注解 这种方式进行的方法增强，  springboot 自定义注解的方式，
+           设置了一个自定义注解
+                  ValidateLicense 包含的属性 首先校验的类型(cpu,cloud_entry,resource,provision,import,day2_opreation) 资源id 以及校验会用到的相关参数组等内容。
+
+2.公有云计费
+      主要用到的技术 主要是设计模式的应用 主要采用的就是策略模式  我们要处理的云资源比较多的,不可能添加一个云资源我们就是改变下代码。
+      包含的云资源就是aliyun，aliapsara，aws，azure，generaic，openstack，powervc，qingyun，tencent，vsphere。
+       业务流程：
+            主要就是在我们申请部署一台虚机的时候 会关联很多的资源 资源环境(资源池，可用区)，实例类型(计算规格，云平台规格)，镜像(操作系统)，存储(系统盘，数据盘)，文件系统，网络(公网ip，安全组)，系统配置(镜像操作系统管理员的用户名，管理员的凭证)，软件配置(节点，软件)  等资源镜像预估费用的操作。
+
+3. 堡垒机 
+           主要用到的技术就是SpringBoot+websocket+juc+Springcloud Gateway等
+           介绍下业务 其实堡垒机的主要功能就是保证网络和数据不受内部和外部用户的入侵和破坏。那么整个安全措施分成三部分 事前授权 该用户可以登录哪些资产  事中监查 活动会话以及事后
+录像记录以及用户轨迹记录等。
+            首先先介绍一下整个流程 一共涉及到2个服务 自动化服务 局域网代理服务 流程服务
+            整个流程大概是分成首先是基于acl实现的权限 登录我们也会加载一些双因子认证  就是我们通过websocket来建立连接的过程 如果连接建立成功 中间我们会对当前的活动会话进行实时监控 还会做一些命令的过滤 整个连接的中的用户使用的命令 我们也会进行落库 连接结束后 我们也会把当前用户的使用轨迹进行保存以便于后期的审计。 
+          ScheduledExecutorService
+
+
+
+          Runnable线程去处理 连接中发生异常的连接 我们会做一个清除的工作 这个时候就会开启一个异步的线程去做这个事情
+              Runable 是一个接口，使用起来也是比较方便
+                使用：1.实现这个接口同时重写run方法
+                           2.利用这个类的对象创建线程
+                           3.线程启动时就会自动调用该对象的run 方法。
+                     实际应用的过程中一般都是结合着ExecutorService使用，将任务的提交和任务的执行解耦开同时也能更好的利用Executor提供的各种特性。
+                     Runnable相对继承方式模式来创建线程，使用runable可以让你实现类同时实现多个接口，相对于callable与future ，runnable方法不返回执行结果，也不抛出异常。
+          Collections.singletonList
+         Collections.unmodifiableList
+          Concurenthashmap 本地缓存 以及redis缓存 
+          StringBuilder
+          synchronized  
+          模板方法
+          springcloud gateway
