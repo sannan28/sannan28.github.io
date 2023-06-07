@@ -1,0 +1,201 @@
+写在前面
+    在阐述Executor之前，先说明一下在Executor出现以前，我们执行任务的方式，
+最开始的方式是采用
+
+    1.串行的方式去执行任务
+        说明：在应用程序中可以通过多种策略来调度任务，而其中的一些策略能够更好的利用潜在的并发性。最简单的策略就是在单个线程中串行的执行各项任务。
+        缺点：串行机制通常无法提供高吞吐率或者快速响应性。
+     当然也会有些例外，任务数量少且执行时间很长时，或者当服务器只为当个用户提供服务，并且该客户每次只发出一个请求的时，但是大多数服务器并不是按照这种方式来工作的。
+ 
+    2.显示的为任务创建线程(即为每一个任务都创建一个线程)
+        说明：通过为每个请求创建一个线程来提供服务，在正常负载的情况下，能实现 更高的响应性以及更高的吞吐率。
+        缺点：无限制的创建线程也会有一些缺陷，尤其是需要创建大量的线程时：
+                   1.线程的生命周期的开销比较高，线程的创建与销毁并不是没有代价的。根据平台的不同，实际的开销也有所不同，但是线程的创建过程都需要时间，延迟处理的请求，并且需要jvm和操作系统提供一些辅助操作。如果请求的到达率非常高且请求的处理过程是轻量级的，例如大多数服务器应用程序就是这种情况，那么为每个请求创建一个新的线程将消耗大量的计算机资源。
+                   2.资源消耗：活跃的线程会消耗系统资源，尤其是内存。如果可运行的线程数量多于可用的处理器数量，那么有些线程将会闲置。大量的空闲线程也会占用内存，给垃圾回收器带来压力，而且大量线程在竞争cpu资源时还会产生其他的性能开销。如果你已经拥有足够多的线程使所有cpu保持忙碌状态，那么在创建更多的线程反而会降低性能。
+                   3.稳定性：在可创建线程的数量上存在一个限制。这个限制值将随着平台的不同而不同，并且受多个因素限制制约，包括jvm的启动参数、thread构造函数中请求的栈的大小，以及底层操作系统对线程的限制等。如果破坏了这些限制，那么很可能抛出outofmemoreyerror异常，要想从这种错误中恢复过来是非常危险的，更简单的办法是通过构造程序来避免超出这些限制。
+                   综上：为每个任务创建一个线程的这种方式 问题在于，它没有限制可创建线程的数量，只限制了远程用户提交http请求的速率。与其他并发危险一样，在原型设计和开发阶段，无限制的创建线程还能较好的运行，但在应用程序部署后并处于高负载的情况下运行时，才会有问题不断的暴露出来。因此，某些恶意的用户或者过多的用户，会使web服务器的负载达到某个阈值，从而使服务器崩溃。如果服务器提供高可用性，并且在高负载的情况下能平缓的降低性能，那么这将是一个严重的故障。
+
+     3.在线程池中执行任务(基于线程池的策略)
+         在线程池中执行任务 会比“为每个任务分配一个线程”优势更多，通过重复利用现有的线程，而不是创建新的线程，可以处理多个请求时分摊在线程创建和销毁过程中产生的巨大开销。另一个的好处就是，当请求到达的时候，工作线程通常已经存在，因此不会由于等待创建线程而延迟任务的执行，从而提高了响应性。通过适当的调整线程池的大小，可以创建足够多的线程以便使处理器保持忙碌状态，同时还可以防止过多线程相互竞争资源而使应用程序耗尽内存而失败。
+        类库中提供了一个灵活的线程池以及一些有用的默认配置。可以通过调用Executors中的静态工厂方法之一来创建一个线程池，那么常用的线程池有：
+
+        Executors.newFixedThreadPool()：newFixedThreadPool 将会创建一个固定长度的线程池，每当提交一个任务的时候就创建一个线程，直到达到线程池的最大数量，这时候线程池的规模不在变化(如果某个线程由于发生了未预期的Exception而结束，那么线程池会补充一个新的线程)。采用的默认的饱和拒绝策略(AbortPolicy()),工厂采用的也是默认的 defaultThreadFactory() ，如下代码：
+       public static ExecutorService newFixedThreadPool(int nThreads) {
+       return new ThreadPoolExecutor(nThreads, nThreads,
+                                  0L, TimeUnit.MILLISECONDS,
+                                  new LinkedBlockingQueue<Runnable>());
+       }
+
+      Executors.newCachedThreadPool()：newCachedThreadPool()将会创建一个可缓存的线程池，如果线程池的当前规模超过了处理需求时，那么将会回收空闲线程，而当需求增加的时候，可以添加新的线程，线程池的规模不存在任何限制。代码：
+     public static ExecutorService nCachedThreadPool() {
+     return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+                                  60L, TimeUnit.SECONDS,
+                                  new SynchronousQueue<Runnable>());
+      }
+
+    Executors.newSingleThreadExecutor()：newSingleThreadExecutor()将会创建一个单线程的Executor，它创建单个工作线程来执行任务，如果这个线程异常结束，会创建另一个线程来代替。newSingleThreadExecutor()能确保依照任务在队列中的顺序来串行执行(例如 FIFO、LIFO、优先级)。代码：
+     public static ExecutorService newSingleThreadExecutor() {
+        return new FinalizableDelegatedExecutorService
+           (new ThreadPoolExecutor(1, 1,
+                                0L, TimeUnit.MILLISECONDS,
+                                new LinkedBlockingQueue<Runnable>()));
+   }
+
+
+   Executors.newScheduledThreadPool()：newScheduledThreadPool() 创建了一个固定长度的线程池，而且以延迟或定时的方式来执行任务，类似于Timer，代码：
+        public static ScheduledExecutorService newSingleThreadScheduledExecutor(ThreadFactory threadFactory) {
+           return new DelegatedScheduledExecutorService
+            (new ScheduledThreadPoolExecutor(1, threadFactory));
+   }
+  
+    ThreadPoolExecutor：自定义线程池。
+
+   public ThreadPoolExecutor(int corePoolSize, int maximumPoolSize,
+                          long keepAliveTime,TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                          ThreadFactory threadFactory,RejectedExecutionHandler handler) { … }
+ 
+
+   线程池的参数介绍：
+       corePoolSize：核心池大小是保持工作线程存活的最小数量(并且不允许超时等)，除非设置了allowCoreThreadTimeOut，在这种情况下，最小值为零。
+       private   int corePoolSize;
+
+       maximumPoolSize：最大池大小。请注意，实际最大值在内部受容量限制。
+       private volatile int maximumPoolSize;
+
+
+       keepAliveTime：空闲线程等待工作的超时时间(以纳秒为单位)。当存在多于corePoolSize或allowCoreThreadTimeOut时，线程使用此超时。否则他们会永远等待新的工作。 
+       private volatile long keepAliveTime;
+
+       unit：keepAliveTime时间单位。
+
+       workQueue：用于保存任务并传递给工作线程的队列。我们并不要求workQueue.poll()返回null就一定意味着workQueue.isEmpty()，因此仅依赖于isEmpty来查看队列是否为空(例如在决定是否从SHUTDOWN转换到TIDYING时必须这样做)。这就适应了特殊用途的队列，例如DelayQueues，允许poll()返回null，即使延迟过期后可能返回非null。
+        private final BlockingQueue<Runnable> workQueue;
+
+        ThreadPoolExecutor允许提供一个BlockingQueue来保存等待执行的任务。基本的任务排队方法有3种：无界队列，有队列，以及同步移交等，队列的选择与其他的配置参数有关，比如线程池的大小。
+         newFixedThreadPool和newSingleThreadExecutor 在默认的情况下将使用一个无界的LinkedBlockingQueue。如果所有工作线程都处于忙碌状态，那么任务就会在队列中等待。如果任务持续的快速到达，并且超过了线程池处理他们的速度，那么对了将无限制的增加。所以一个比较稳妥的管理策略是使用有界队列，像ArrayblockingQueue，有界的LinkedBlockingQueue、PriorityBlockingQueue。有界队列有助于避免资源耗尽的情况，但是也带来了新的问题，就是队列填满后，新任务怎么办(此时就会有饱和策略可以解决这个问题)。
+         ArrayBlockingQueue(java.util.concurrent)：一个用数组实现的有界队列，此队列按照先进先出(FIFO)的原则对元素排序。支持公平锁以及非公平锁。
+         LinkedBlockingQueue(java.util.concurrent)：一个由链表结构组成的有界队列，此队列按照先进先出(FIFO)的原则对元素进行排序。此队列的默认长度Integer.MAX_VALUE，所以默认创建的该队列存在一些容量上的危险。
+         PriorityBlockingQueue(java.util.concurrent)：一个支持线程优先级排序的无界队列，默认自然序进行排序，也可以自定义实现compareTo()方法来指定元素排序规则，不能保证同优先级的顺序。
+         SynchronousQueue(java.util.concurrent)：一个不存储元素的阻塞队列，每一个put操作必须等待take操作，否则不能添加元素。支持公平锁和非公平锁。SynchronousQueue的一个使用场景是在线程池里。newCachedThreadPool() 默认使用的就是该队列。
+         DelayQueue(java.util.concurrent)：一个实现PriorityBlockingQueue实现延迟获取的无界队列，在创建元素的时候，可以指定多久才可以才能从队列中获取当前元素。室友延时期满后才能从队列中获取元素。
+         LinkedTransferQueue(java.util.concurrent)：一个由链表结构组成的无界阻塞队列，相当于其他队列，LinkedTransferQueue队列中多了transfer和tryTransfer方法。
+         LinkedBlockingDeque(java.util.concurrent):一个由量表组成的双向阻塞队列。队列头部和尾部都可以添加移除元素，多线程并发的时，可以将锁的竞争减少到一半。
+      
+
+       threadFactory：工厂生产新线程。所有线程都是使用这个工厂创建的(通过方法addWorker)。所有调用方都必须做好addWorker失败的准备，这可能反映了系统或用户限制线程数量的策略。即使不将其视为错误，创建线程失败也可能导致新任务被拒绝或现有任务仍然卡在队列中。我们更进一步，甚至在遇到OutOfMemoryError等错误时也保留池不变量，这些错误可能在尝试创建线程时被抛出。这样的错误相当常见，因为需要在Thread中分配本机堆栈。启动时，用户将希望执行清理池关闭来进行清理。可能会有足够的内存供清理代码完成，而不会遇到另一个OutOfMemoryError。(private volatile ThreadFactory threadFactory;)。
+
+       handler：处理程序在执行中饱和或关闭时调用。
+       private volatile RejectedExecutionHandler handler;)
+         当队列被填满以后，饱和策略开始发挥作用，ThreadPoolExecutor的饱和策略可以通过setRejectedExecutionHandler来修改(如果某个任务被踢交到一个已经被关闭的Executor时，这个时候也会触发饱和策略)
+       线程池提供的拒绝饱和策略
+            AbortPolicy：中止策略，是默认的饱和拒绝策略，这个策略将会抛出未检查的RejectedExecutionException。调用者可以捕获这个异常。然后根据需求编写自己的处理代码。
+            DiscardPolicy：直接丢弃任务，不予任何处理也不抛出异常。如果允许任务丢失，这是一种最好的解决方案。
+            DiscardOldestPolicy：抛弃队列中等待最久的任务，然后把当前任务加入到队列中尝试再次提交当前任务。
+            CallerRunsPolicy：“调用者运行”实现了一种调节机制，该策略既不会抛弃任务，也不会抛出异常，而是将某些任务回退到调用者，从而降低新任务的流量。它不会在线程池的某个线程中执行新提交的任务，而是在一个调用了execute的线程中执行该任务。
+
+
+    线程池执行过程：
+
+         首先在创建了线程池之后，会等待提交后来的任务，当执行execute()方法添加一个请求任务的时，线程池会做如下判断：
+     如果正在运行的线程数量小于核心线程数，那么会马上创建线程运行这个任务。
+     如果正在运行的线程数量大于或等于线程核心数，那么会将这个任务放到队列。
+     如果这个时候队列已经满了且正在运行的线程数量小于最大线程数，那么这个时候会创建非核心线程立刻运行任务。
+     如果这个时候队列已经满了且正在运行的线程数量大于或者等于最大线程数，那么这个时候线程池就会启动饱和拒绝策略来执行。  
+         当一个线程完成任务的时候，它会从队列中取下一个任务来执行。
+         当一个线程无事可做超过keepAliveTime时间时，线程池就会判断：
+             当前运行的线程数大于核心线程数，那么这个线程就会被停掉。
+     所以线程池的所有任务完成之后它最终会收缩到线程核心数大小。
+             
+
+       线程池大小配置：
+
+           线程池的理想大小取决于被提交任务的类型以及部署系统的特性。在代码中通常不会固定线程池的大小，而应该通过某种配置机制来提供，或者根据RunTime.getRunTime().availableProcessors()来动态计算。
+           幸运的是，要设置线程池大小也并不困难，只要避免“过大”或者“过小”这两种极端情况。如果线程池过大，那么大量的线程会在相对很少的cpu和内存资源上发生竞争，这不仅仅会导致更高的内存使用量。而且还可能耗尽资源。如果线程池过小，那么将会导致许多空闲的处理器无法执行工作。从而降低吞吐率。
+
+            要想正确的设置线程池的大小 ，必须分析计算环境、资源预算、以及任务的特性。在部署的系统中有多少个cpu，多大的内存，任务是cpu密集型还是IO密集型，还是二者皆可？它们是否需要像jdbc这样的稀缺资源？如果需要执行不同类型的任务，并且它们相差很大，那么应该考虑使用多个线程池，从而使每个线程池可以根据各自的工作负载来调整。
+           对于cpu密集的任务，在拥有N(CPU个数)个处理器的系统上，当线程池的大小为 N+1 通常能实现最优的利用率。主要原因是：即使当计算机密集型的线程偶尔由于页的缺失故障或者其他原因而暂停时，这个额外的线程也能保证cpu的时钟周期不会被浪费。
+           对于包含io密集型或者其他阻塞操作的任务，由于线程不会一直执行，因此线程池的规模应该更大。要正确的设置线程池的大小，必须概估算出任务的等待时间与计算时间的比值。这种估算不需要很准确，可以通过一些分析或者监控工具来获得。目前的笔者掌握的计算公式是:
+            1.cpu*2
+            2.cpu/1-阻塞系数   说明 阻塞系数大概是0.8~0.9 之间。
+
+        关于线程池的选择：
+           Executors 下提供了四种常用的静态线程池 以及自定义线程池 那么我们该如何选择呢？
+     正常在生产上，线程池不允许用Executors去创建，而是通过ThreadPoolExecutor的方式，这样的处理方式让写的童鞋可以更加明确线程池的运行规则，规避资源耗尽的风险。
+            newFixedThreadPool 和newSingleThreadExecutor 允许的请求队列的长度是Integer.MAX_VALUE 会堆积大量的请求，从而导致OOM.
+            newCachedThreadPool和newScheduledThreadPool 允许的创建的线程数为Interger.MAX_VALUE 会创建大量的线程，也会导致OOM.
+
+
+对于线程池的操作：
+    如何关闭：首先这个体现的是Executor的生命周期，Executor拓展了一个ExecutorService接口，添加了一些用于生命周期的管理方法(同时还有一些用于任务提交的便利方法)。
+    public interface ExecutorService extends Executor {
+        void shutdown(); // 比较平滑的关闭过程，所有已经提交的任务都会执行完以后才会关闭。
+        List<Runnable> shutdownNow();// 粗暴的关闭，取消所有正在执行以及已经提交未执行的任务。
+        boolean isShutdown(); // 判断是否关闭
+         boolean isTerminated(); // 判断ExecutorService是否已经终止
+        boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+        <T> Future<T> submit(Callable<T> task);
+        <T> Future<T> submit(Runnable task, T result);
+        Future<?> submit(Runnable task);
+            .
+            .
+            .
+         }
+        ExecutorService生命周期有3中状态，运行，关闭，终止。ExecutorService在初始化创建的是处于运行的状态，
+shutdown()：方法将执行平缓的关闭过程，不会在接收新的任务，同时等待已经提交的任务执行完成(包括那些还未开始执行的任务)。
+shutdownNow()：方法将执行粗暴的关闭过程，它将尝试取消所有运行中的任务，并且不在启动队列中尚未开始执行的任务。
+ 
+说明：被ExecutorService关闭后提交的任务将由”拒绝执行处理器(Rejected Execution Handler)“来处理，它会抛弃任务，或者使execute方法抛出一个未检查的Rejected-ExecutionException。等所有任务完成之后，ExecutorService就会转入终止状态。
+
+
+对于线程生命周期的操作方法：
+     线程中断操作：
+         首先了解一下什么是线程的中断机制？
+             正常一个线程应该由自己来强制中断或停止，自己决定自己的命运，所以类似于Thread.stop，Thread.suspend，Thread.resume都已经被废弃了。
+              在Java中没有办法立即停止一条线程，然而停止线程也是显的比较重要，如取消一个耗时的操作。因此Java提供了一种用于停止线程的协商机制------中断，也就是中断标识机制。
+            切入正题：
+                线程的中断是一种协商操作，Java没有给中断增加任何语法,中断的过程是完全需要程序员自己实现的。如果想要中断一个线程，你需要手动调用该线程的interrupt方法，该方法仅仅死将线程对象的中断标识设成true，后续还需要程序员自己去写代码不断的检测当前线程的标识位。可以在别的线程中调用也可以在自己的线程中调用。
+            中断常用的3个API：
+                public void interrupt():
+                    实例方法，仅仅是设置线程的中断状态为true
+
+                 public boolean isInterrupted():
+                     实例方法：判断当前是否被中断(通过检测中断标志)。
+                 关于以上两个api的说明：
+                      具体来说，当对一个线程调用interrupt()时：
+                           有两种情况：
+                               第一种：如果线程处于正常活动的状态，那么会将该线程的中断标志设置为true，仅此而已，被设置为中断标志的线程将继续正常运行，不受影响。所以interrupt()并不能真正的中断线程，需要被调用线程自己进行配合。
+                               第二种：如果线程正处于阻塞状态(sleep,wait.join等状态)，在别的线程调用当前线程的interrupt()方法，那么线程会立即退出被阻塞状态，并抛出一个InterruptedException异常。会影响后续程序员自己定义的中断逻辑，所以在使用中断的时候，需要在catch代码块中 再次设置中断标识 以防这样的问题发生。
+                               第三种：如果线程处于不活动的状态 比如当前任务执行结束, 中断一个不活动的线程不会产生任何影响。
+
+                public static boolean interrupted():
+                      静态方法，这个方法做了两件事情,其一：返回当前线程的中断状态，测试当前线程是否已经被中断。其二：将当前线程的中断状态清零并重新设为false,清除线程的中断状态。                                            
+             
+             实现中断的三种方式：
+                   第一场景：如何实现中断(停止)运行中的线程?
+                        方式一：通过一个volatile变量来实现    
+                        方式二：通过AtomicBoolean实现
+                        方式三：通过Thread类自带的中断api的实例方
+法实现。
+                             
+                          
+
+
+
+
+    
+         
+
+
+// 先注释掉。
+就是采用Executor框架(属于java.util.concurrrent包下的内容) 在
+                 首先介绍的就是Executor接口，Executor是个简答的接口，但是它却为灵活且强大的异步任务执行框架提供了基础，这个接口能支持多种不同类型的任务执行策略。
+    执行策略其实从线程池的参数中就可以体现出来，执行策略定义了任务执行的 “what、where、when、how”等 几个方面
+
+              what：线程中执行的任务
+              what：任务按照什么顺序执行(FIFO,LIFO,优先级)
+               how：有多少任务能并发执行
+               how：在队列中有多少个任务在等待执行
+               如果系统由于过载而需要拒绝一个任务，那么应该选择哪一个任务，另外，如何通知应用程序有任务被拒绝
+               在执行一个任务的前后，应该进行哪些动作
+               各种策略都是一种资源管理工具，最佳策略取决于 可用的计算机资源以及对服务质量的需求。通过限制并发任务数量，可以确保应用程序不会由于资源耗尽而失败，或者由于在稀缺资源上发生竞争而严重影响性能。通过将任务的提交与任务的执行策略分来开来，有助于在部署阶段选择与可用硬件资源最匹配的执行策略。
+        
