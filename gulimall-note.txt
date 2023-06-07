@@ -63,6 +63,9 @@
 		    后面的安装的版本
 		        node.js v16.20.0 /usr/local/bin/node
 			npm 8.19.4 /usr/local/bin/npm
+			  还需要在升级一下npm sudo npm install npm@latest -g
+                 关于前端的这个小插曲已经解决了！
+  15.
 			
 			
        
