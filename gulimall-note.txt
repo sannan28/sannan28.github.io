@@ -65,9 +65,19 @@
 			npm 8.19.4 /usr/local/bin/npm
 			  还需要在升级一下npm sudo npm install npm@latest -g
                  关于前端的这个小插曲已经解决了！
-  15.
-			
-			
+  15. 在当前项目引入gitee的项目作为模块，并且提交到github上：
+       需要使用的命令：
+         git submodule add <url> project(需要存放下载的项目路径)
+        eg: git submodule add https://gitee.com/JavonPeng/project.git
+	   如果
+        eg: git submodule add https://gitee.com/JavonPeng/project.git
+             如果执行的时候报错 需要使用来清理一下缓存	
+	        git rm -r -f --cached <project>
+		git submodule add https://gitee.com/JavonPeng/project.git
+                git add .
+		git commit -m "添加备注"
+                git push
+ 16.
        
  
 	 
