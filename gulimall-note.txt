@@ -82,10 +82,12 @@
      问题1：就是maven项目的common模块中的依赖包无法共享
        这个问题虽然调整好了 但是不知道为什么？？？ 先放一下。
      问题2：maven 编译的问题 启动springboot项目时报错：无法访问org.springframework.web.bind.annotation.GetMapping …具有错误的版本 61.0，应为52.0 
-        这个问题出现的原因大概是即使jdk的版本和spring boot冲突了，还有就是如果maven编译的问题已经修好了 但是还是编译出错 那就重新启动一下idea。\
+        这个问题出现的原因大概是即使jdk的版本和spring boot冲突了，还有就是如果maven编译的问题已经修好了 但是还是编译出错 那就重新启动一下idea。
 
   17.问题 google浏览器不支持6000端口 主要是google默认的非安全端口限制导致的，这个问题后续会整理一下。
- 
+  18.问题 git提交代码的时候总是一堆.idea的文件 如何处理
+      此处以macOS作为示例 首先找到项目的根目录 在finder，就是寻找。ignore文件 mac中默认是不显示这些文件的，可以使使用快捷键[shift+command+.] 然后在。ignore文件中添加 **/.idea/ 即可 
+       参考连接：https://blog.csdn.net/maixiaochai/article/details/89302809
 	 
 	 
 	 
