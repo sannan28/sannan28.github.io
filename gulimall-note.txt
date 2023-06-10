@@ -88,6 +88,14 @@
   18.问题 git提交代码的时候总是一堆.idea的文件 如何处理
       此处以macOS作为示例 首先找到项目的根目录 在finder，就是寻找。ignore文件 mac中默认是不显示这些文件的，可以使使用快捷键[shift+command+.] 然后在。ignore文件中添加 **/.idea/ 即可 
        参考连接：https://blog.csdn.net/maixiaochai/article/details/89302809
+  19. 问题： 没想到自己小小的学习的数据库也会被黑 记录一下 在公网上的数据库设置安全组规则的时候最好还是 不要开放敏感端口，以及不要开放所有ip地址都能访问
+         查看本地的公网ip: https://www.ipip.net/?spm=5176.smartservice_service_robot_chat_new.0.0.6054709aA9yLte 
+	   使用完可以先把安全组关闭掉。
+	   
+  20.mysql 
+        创建用户：CREATE USER 'gulimall'@'%' IDENTIFIED BY 'xxxx';
+        给用户授权：grant all privileges on *.* to "gulimall"@"%";
+        刷新：flush PRIVILEGES;
 	 
 	 
 	 
