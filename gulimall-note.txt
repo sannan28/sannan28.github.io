@@ -96,6 +96,63 @@
         创建用户：CREATE USER 'gulimall'@'%' IDENTIFIED BY 'xxxx';
         给用户授权：grant all privileges on *.* to "gulimall"@"%";
         刷新：flush PRIVILEGES;
+
+  21.再一次在阿里云的ecs上使用nacos服务
+      原计划是直接在nacos上直接拉取需要的版本镜像 但是不知道是不是赶上了上海的梅雨季 网络实在不敢恭维 怎么拉取也拉取不下来的镜像 最后只好使用dockerfile来完成啦 小小的记录一下下
+       step1: 首先是需要准备好 nacos docker镜像的源码 链接地址：https://nacos.io/zh-cn/docs/quick-start-docker.html
+                可以通过git进行下载，因为我的虚拟机里没有git 所以我是安装在本地 然后使用scp命令上传到我的虚拟机内的 
+                 git clone git@github.com:nacos-group/nacos-docker.git
+                 sudo scp -r /Users/lishengnan/docker/nacos-docker root@47.100.33.56:/root/dockerfile
+       step2: 然后准备需要使用的nacos-server版本 这里我使用的是nacos-server-2.0.4
+                  链接地址：https://github.com/alibaba/nacos/releases/download/2.0.4/nacos-server-2.0.4.tar.gz
+                  同样的也需要把这个包上传到ecs的home目录下 sudo scp -r /Users/lishengnan/docker/nacos-server-2.0.4.tar.gz root@47.100.33.56:/home        
+                说明:上传到home 并不是固定的，之所以采用从本地上传到ecs中 主要是网络状况不好 不然可以直接使用wget命令 或者curl命令下载也是可以的
+       step3: 准备好需要使用的工具后 需要更改下 /nacos-docker/build/Dockerfile文件的内容 由于已经准备好 nacos-server包了 所以需要修改
+                 1.ARG NACOS_VERSION=2.0.4
+                 2.
+                 RUN set -x \
+                     && yum update -y \
+                     && yum install -y java-1.8.0-openjdk java-1.8.0-openjdk-devel iputils nc vim libcurl \
+                     && yum clean all
+                 RUN tar -xzvf /home/nacos-server-2.0.4.tar.gz -C /home \
+                     && rm -rf /home/nacos-server-2.0.4.tar.gz /home/nacos/bin/* /home/nacos/conf/*.properties /home/nacos/conf/*.example /home/nacos/conf/nacos-mysql.sql \
+                     && ln -snf /usr/share/zoneinfo/$TIME_ZONE /etc/localtime && echo $TIME_ZONE > /etc/timezone
+
+       step4: 就可以在build文件夹下执行构建的命令了
+                 docker build -t nacos/nacos-server-2.0.4 .  
+                  至此镜像构建成功 
+       前三步骤 参考的博客：https://blog.csdn.net/weixin_39896810/article/details/107613270
+       step5: 接下来就是使用这个镜像运行容器 做持久化 以及 要挂载节点
+            参考的博客：https://blog.csdn.net/qq_42764269/article/details/122205359
+            设置mysql参数的时候遇到的问题 就是 mysql nacos 都在ecs中 nacos连接mysql的ip应该怎么设置，这个问题就是 如何查看mysql的ip地址 可以使用如下命令：
+                docker inspect mysql-8.0.33 | grep IPAddress
+             参考博客：https://blog.csdn.net/m0_55070913/article/details/126327378
+             nacos 启动命令 
+             docker run -d \
+             -e MODE=standalone \
+             -e SPRING_DATASOURCE_PLATFORM=mysql \
+             -e MYSQL_SERVICE_HOST=172.17.0.3 \
+             -e MYSQL_SERVICE_PORT=3307 \
+             -e MYSQL_SERVICE_USER=gulimall \
+             -e MYSQL_SERVICE_PASSWORD=c10udch3f \
+             -e MYSQL_SERVICE_DB_NAME=nacos \
+             -e TIME_ZONE='Asia/Shanghai' \
+             -v /root/docker-mount/nacos-2.0.4/logs:/home/nacos/logs \
+             -v /root/docker-mount/nacos-2.0.4/conf:/home/nacos/conf \
+             -p 8848:8848 \
+             -p 9848-9849:9848-9849 \
+             --name nacos-2.0.4 \
+             --restart=always \
+             nacos/nacos-2.0.4:latest
+            这个问题以后还是需要优化的 这样创建镜像还是很麻烦的 后续需要找一个比较好点的方式来处理。
+
+              
+             
+    
+            
+        
+          
+
 	 
 	 
 	 
