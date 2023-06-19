@@ -147,6 +147,10 @@
             这个问题以后还是需要优化的 这样创建镜像还是很麻烦的 后续需要找一个比较好点的方式来处理。
              http://47.100.33.56:8848/nacos/#/login 来进行使用把~
 
+   22.采用dockerfile的形式构建sentinel容器 参考博客: https://blog.csdn.net/u013068184/article/details/107335730
+        执行run命令 docker run --name sentinel-dashboard-1.8.5 --restart=always -p 8080:8080 -d sentinel-dashboard:1.8.5
+       
+
               
              
     
