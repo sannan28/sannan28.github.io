@@ -97,7 +97,7 @@
         给用户授权：grant all privileges on *.* to "gulimall"@"%";
         刷新：flush PRIVILEGES;
 
-  21.再一次在阿里云的ecs上使用nacos服务
+  21.安装:再一次在阿里云的ecs上使用nacos服务
       原计划是直接在nacos上直接拉取需要的版本镜像 但是不知道是不是赶上了上海的梅雨季 网络实在不敢恭维 怎么拉取也拉取不下来的镜像 最后只好使用dockerfile来完成啦 小小的记录一下下
        step1: 首先是需要准备好 nacos docker镜像的源码 链接地址：https://nacos.io/zh-cn/docs/quick-start-docker.html
                 可以通过git进行下载，因为我的虚拟机里没有git 所以我是安装在本地 然后使用scp命令上传到我的虚拟机内的 
@@ -147,8 +147,18 @@
             这个问题以后还是需要优化的 这样创建镜像还是很麻烦的 后续需要找一个比较好点的方式来处理。
              http://47.100.33.56:8848/nacos/#/login 来进行使用把~
 
-   22.采用dockerfile的形式构建sentinel容器 参考博客: https://blog.csdn.net/u013068184/article/details/107335730
+   22.安装:采用dockerfile的形式构建sentinel容器 参考博客: https://blog.csdn.net/u013068184/article/details/107335730
         执行run命令 docker run --name sentinel-dashboard-1.8.5 --restart=always -p 8080:8080 -d sentinel-dashboard:1.8.5
+
+   23.问题:maven项目的包依赖冲突该如何解决？
+        这个问题暂时没有详细的整理 只是针对当时使用alibaba的组件遇到的一些问题简单的整理 后续会详细的整理一下。
+        我参考的是一个文章，文章的链接是：https://zhuanlan.zhihu.com/p/417419703
+           安装一个查看包冲突plugin maven helper 安装后点击pom文件会出现一个depandency analyzer包冲突分析器 通过分析器我们可以很直观的看到存在的冲突包
+        然后可以手动选择移除。
+            exclusion移除的时候 还是要看下移除内容的位置 有的时候是一个依赖下面存在三个一样的子依赖 会一次性将内容全部都移除 这种情况下需要额外显示引入依赖包。
+          
+
+
        
 
               
