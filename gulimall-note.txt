@@ -156,6 +156,10 @@
            安装一个查看包冲突plugin maven helper 安装后点击pom文件会出现一个depandency analyzer包冲突分析器 通过分析器我们可以很直观的看到存在的冲突包
         然后可以手动选择移除。
             exclusion移除的时候 还是要看下移除内容的位置 有的时候是一个依赖下面存在三个一样的子依赖 会一次性将内容全部都移除 这种情况下需要额外显示引入依赖包。
+   24. 在docker中安装elasticsearch
+        首先需要确认安装的 elasticsearch的版本需要和spring boot兼容 相关版本的参照说明：
+           https://docs.spring.io/spring-data/elasticsearch/docs/current/reference/html/#preface.versions
+        本次使用的spring boot 2.6.11 与之对应的elasticsearch的版本就是7.15.2
           
 
 
