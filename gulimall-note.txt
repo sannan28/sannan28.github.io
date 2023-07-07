@@ -164,6 +164,11 @@
         相关的运行命令：
            docker run --name elasticsearch-7.15.2 --restart=always -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xmx128m" -v /root/docker-mount/elasticsearch-7.15.2/data:/usr/share/elasticsearch/data -v /root/docker-mount/elasticsearch-7.15.2/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml -d docker.elastic.co/elasticsearch/elasticsearch:7.15.2
             说明没有挂载plugins 因为一直在报错。
+  25. 在docker中安装kibana
+        参考的博客依然是：https://elasticstack.blog.csdn.net/article/details/100919273
+           相关的命令：docker run --name kibana-7.15.2 --restart=always -e -p 5601:5601 -d docker.elastic.co/kibana/kibana:7.15.2
+              注意需要更改kibana配置文件中的elasticsearch地址
+
 
        
           
