@@ -167,6 +167,24 @@
         参考的博客依然是：https://elasticstack.blog.csdn.net/article/details/100919273
            相关的命令：docker run --name kibana-7.15.2 --restart=always -e -p 5601:5601 -d docker.elastic.co/kibana/kibana:7.15.2
               注意需要更改kibana配置文件中的elasticsearch地址
+  26.在docker中安装nginx
+        step1: docker pull nginx
+        step2: 随便启动一个nginx的服务 
+                docker run --name test -p 80:80 -d nginx:latest
+                将容器内部的配置文件拷贝到当前目录
+                docker container cp nginx:/etc/nginx .
+                docker cp test:/etc/nginx /root/docker-mount/nginx/conf
+                修改文件的路径(强迫症) 省略
+        step3: 终止这个临时启动的容器
+                 docker stop test
+        step4: 执行命令删除容器
+                 docker rm -f test
+        step5: 最后执行运行容器的命令
+                 docker run --name nginx-latest --restart=always -p 80:80 -v /root/docker-mount/nginx/conf/nginx:/etc/nginx -v /root/docker-mount/nginx/logs:/var/log/nginx -v /root/docker-mount/nginx/html:/usr/share/nginx/html -d nginx:latest
+                
+   
+
+   
 
 
        
