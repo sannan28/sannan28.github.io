@@ -162,7 +162,7 @@
         本次使用的spring boot 2.6.11 与之对应的elasticsearch的版本就是7.15.2
         参考的博客链接：https://elasticstack.blog.csdn.net/article/details/100919273
         相关的运行命令：
-           docker run --name elasticsearch-7.15.2 --restart=always -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xmx128m" -v /root/docker-mount/elasticsearch-7.15.2/data:/usr/share/elasticsearch/data -v /root/docker-mount/elasticsearch-7.15.2/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml -d docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+           docker run --name elasticsearch-7.15.2 -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xmx512m" -v /root/docker-mount/elasticsearch-7.15.2/data:/usr/share/elasticsearch/data -v /root/docker-mount/elasticsearch-7.15.2/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml -v /root/docker-mount/elasticsearch-7.15.2/plugins:/usr/share/elasticsearch/plugins -d docker.elastic.co/elasticsearch/elasticsearch:7.15.2
             说明没有挂载plugins 因为一直在报错。
   25. 在docker中安装kibana
         参考的博客依然是：https://elasticstack.blog.csdn.net/article/details/100919273
