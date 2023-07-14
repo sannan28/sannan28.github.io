@@ -183,7 +183,27 @@
                  docker rm -f test
         step5: 最后执行运行容器的命令
                  docker run --name nginx-latest --restart=always -p 80:80 -v /root/docker-mount/nginx/conf/nginx:/etc/nginx -v /root/docker-mount/nginx/logs:/var/log/nginx -v /root/docker-mount/nginx/html:/usr/share/nginx/html -d nginx:latest
-                
+
+27.问题:循环依赖
+     报错信息：
+       Description:
+       The dependencies of some of the beans in the application context form a cycle:
+           brandController (field private com.learn.mall.product.service.BrandService com.learn.mall.product.controller.BrandController.brandService)
+           ┌─────┐
+           |  brandService (field private com.learn.mall.product.service.CategoryBrandRelationService 
+           com.learn.mall.product.service.impl.BrandServiceImpl.categoryBrandRelationService)
+           ↑     ↓
+           |  categoryBrandRelationService (field private com.learn.mall.product.service.BrandService 
+           com.learn.mall.product.service.impl.CategoryBrandRelationServiceImpl.brandService)
+           └─────┘
+       Action:
+       Relying upon circular references is discouraged and they are prohibited by default. Update your application to remove the dependency cycle between beans. 
+       As a last resort, it may be possible to break the cycle automatically by setting spring.main.allow-circular-references to true.
+      解决思路：
+        这个问题还要从优化代码的角度来处理 目前先添加配置 来解决这个问题
+          spring.main.allow-circular-references=true
+         参考文章：https://blog.csdn.net/m0_73813319/article/details/127265246
+ 
    
 
    
