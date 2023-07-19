@@ -203,6 +203,12 @@
         这个问题还要从优化代码的角度来处理 目前先添加配置 来解决这个问题
           spring.main.allow-circular-references=true
          参考文章：https://blog.csdn.net/m0_73813319/article/details/127265246
+28.问题 在centos上执行deb文件
+     参考链接：https://juejin.cn/s/centos%E6%80%8E%E4%B9%88%E5%AE%89%E8%A3%85deb%E6%96%87%E4%BB%B6
+       采用的是链接中的第二种方式 
+          中间遇到了一个小插曲 问题：Need executable 'rpmbuild' to convert deb to rpm {:level=>:error}
+           解决的方式就是 yum install -y rpm-build
+
  
    
 
