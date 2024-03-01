@@ -1,0 +1,6 @@
+写在前面：需要注意的一点是 需要和mac os系统版本对应 比如mac os 10.13 需要使用1.4.4 的nacos版本。
+1.搭建nacos源码学习的环境
+   在启动编译前，在IDEA中提前安装好【GenProtobuf】插件，Nacos源码中的一致性协议模块会依赖。关于该插件的更多信息可以参考链接:https://juejin.cn/post/7340573783743086627.
+2.关于学习nacos源码 网上比较好的几篇文章链接
+   https://juejin.cn/post/7231427492610850874#heading-8 
+3.
