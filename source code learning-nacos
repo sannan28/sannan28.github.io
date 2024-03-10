@@ -1,7 +1,7 @@
 写在前面：需要注意的一点是 需要和mac os系统版本对应 比如mac os 10.13 需要使用1.4.4 的nacos版本。
 此次学习主要是从源码的角度去学习nacos的源码 学习的版本是nacos-1.4.2
    首先需要明白的是 学习源码的目的
-        1.我最初的原因是为了应付面试
+        1.我最初的原因是为了应付面试 
 1.搭建nacos源码学习的环境
    在启动编译前，在IDEA中提前安装好【GenProtobuf】插件，Nacos源码中的一致性协议模块会依赖。关于该插件的更多信息可以参考链接:https://juejin.cn/post/7340573783743086627.
 2.关于学习nacos源码 网上比较好的几篇文章链接
@@ -11,3 +11,18 @@
 5.spring cloud alibaba 版本对应参考链接:
 6.关于整合spring cloud alibaba所有组件的博客参考链接：https://blog.csdn.net/suprezheng/article/details/123729595
 7.nacos1.4.2 源码解析博客：https://blog.csdn.net/qq_31821733/article/details/118198276?spm=1001.2014.3001.5502 流程图： https://www.processon.com/view/link/60d87a95637689326ce6a928
+8.如何阅读源码？
+    首先是先学会使用
+    抓主线
+    画图做笔记
+    整合总结
+9.此次学习目标，nacos的核心功能有哪些？服务注册，服务心跳，服务健康检查，服务发现，服务同步等。
+    基础概念的理解：
+      1.服务发现？nacos是如何实现服务提供者的注册以及消费者发现机制呢？
+      2.动态配置服务？nacos是如何管理和动态刷新配置信息？
+          
+     
+   
+
+
+
