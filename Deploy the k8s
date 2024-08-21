@@ -1,0 +1,19 @@
+极速部署基于Ubuntu系统的kubernetes（k8s 1.30版本）集群，k8s教程/k8s安装/k8s部署
+   环境：
+    macOS上使用multipass创建的ubunntu24.04 操作系统 
+    containerd 版本是 cri-containerd-1.7.16-linux-amd64.tar(这里要注意macOS是intel 还是m1芯片, intel记得选择amd,M1芯片选择ard)   
+    kubeadm kubelet kubectl 版本均是1.30.1
+   部署K8s的集群环境最主要的还是要做好前期的准备，这样使用kubeadm 初始化集群的时候才会成功
+1.首先
+   使用multipass创建3台虚拟机
+     multipass launch -n master -c 2 -m 8G -d 30G
+     multipass launch -n worker1 -c 2 -m 8G -d 30G
+     multipass launch -n worker2 -c 2 -m 8G -d 30G
+    说明:创建好虚拟机后 我们要为虚拟机配置下ssh 以及用户密码等信息
+      sudo passwd root  会需要输入两次密码
+      sudo vi /etc/ssh/sshd_config 主要是需要需改 [Port 22、PermitRootLogin yes、PubkeyAuthentication yes、PasswordAuthentication yes、KbdInteractiveAuthentication yes]
+      sudo service ssh restart
+   配置好后就可以根据
+      
+
+     
