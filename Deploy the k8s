@@ -9,11 +9,12 @@
      multipass launch -n master -c 2 -m 8G -d 30G
      multipass launch -n worker1 -c 2 -m 8G -d 30G
      multipass launch -n worker2 -c 2 -m 8G -d 30G
-    说明:创建好虚拟机后 我们要为虚拟机配置下ssh 以及用户密码等信息
+   说明:创建好虚拟机后 我们要为虚拟机配置下ssh 以及用户密码等信息
       sudo passwd root  会需要输入两次密码
       sudo vi /etc/ssh/sshd_config 主要是需要需改 [Port 22、PermitRootLogin yes、PubkeyAuthentication yes、PasswordAuthentication yes、KbdInteractiveAuthentication yes]
       sudo service ssh restart
-   配置好后就可以根据
+   配置好后就可以使用ssh 远程登录虚拟机配置。
+ 2.以下内容就可以参考附件来配置。
       
 
      
