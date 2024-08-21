@@ -14,7 +14,73 @@
       sudo vi /etc/ssh/sshd_config 主要是需要需改 [Port 22、PermitRootLogin yes、PubkeyAuthentication yes、PasswordAuthentication yes、KbdInteractiveAuthentication yes]
       sudo service ssh restart
    配置好后就可以使用ssh 远程登录虚拟机配置。
- 2.以下内容就可以参考附件来配置。
+ 2.以下内容就可以参考附件来配置。(如何基于Ubuntu 24.04部署原生K8S 1.30.0集群.pdf)
+这里主要是记录下在整个部署k8s 集群的中遇到的一些问题 
+    问题1：使用命令：apt install ntpdate 会出现 Unable to locate package ntpdate
+      解决方式： sudo apt update && sudo apt upgrade -y
+        正常网络没有问题的情况下都是可以成功执行的 但是网络不好的情况下 可能还会存在失败的情况。
+    问题2：安装 K8s 网络插件Calico遇到的问题 就是无法拉取docker相关的镜像 
+      解决方式一：最开始采用的是离线的方式，就是提前将需要的镜像下载好 这里以calico v3.28.0这个版本为例。
+        参考连接：（https://blog.csdn.net/u011197085/article/details/139472547、https://blog.csdn.net/qq_36961488/article/details/131701573）
+         在安装 Calico v3.28.3 需要额外处理的镜像是 pod2daemon-flexvol:v3.28.0、typha:v3.28.0、cni:v3.28.0、node:v3.28.0、csi:v3.28.0、kube-controllers:v3.28.0、node-driver-registrar:v3.28.0
+          获取镜像的地址是：https://docker.aityp.com/s/docker.io
+        整个步骤是：
+          首先 把镜像拉取到本地：
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/pod2daemon-flexvol:v3.28.0
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/typha:v3.28.0   
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/cni:v3.28.0
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/node:v3.28.0
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/csi:v3.28.0
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/kube-controllers:v3.28.0
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/node-driver-registrar:v3.28.0
+            ctr images pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/apiserver:v3.28.0
+          然后：把镜像打成tag包：
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/pod2daemon-flexvol:v3.28.0  docker.io/calico/pod2daemon-flexvol:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/typha:v3.28.0  docker.io/calico/typha:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/cni:v3.28.0  docker.io/calico/cni:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/node:v3.28.0  docker.io/calico/node:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/csi:v3.28.0  docker.io/calico/csi:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/kube-controllers:v3.28.0  docker.io/calico/kube-controllers:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/node-driver-registrar:v3.28.0  docker.io/calico/node-driver-registrar:v3.28.0
+            ctr images tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/calico/apiserver:v3.28.0  docker.io/calico/apiserver:v3.28.0
+          将拉取的镜像导出为 tar 文件：
+            sudo ctr image export pod2daemon-flexvol:v3.28.0.tar docker.io/calico/pod2daemon-flexvol:v3.28.0
+            sudo ctr image export typha:v3.28.0.tar docker.io/calico/typha:v3.28.0
+            sudo ctr image export cni:v3.28.0.tar docker.io/calico/cni:v3.28.0
+            sudo ctr image export node:v3.28.0.tar docker.io/calico/node:v3.28.0
+            sudo ctr image export csi:v3.28.0.tar docker.io/calico/csi:v3.28.0
+            sudo ctr image export kube-controllers:v3.28.0.tar docker.io/calico/kube-controllers:v3.28.0
+            sudo ctr image export node-driver-registrar:v3.28.0.tar docker.io/calico/node-driver-registrar:v3.28.0
+            sudo ctr image export apiserver:v3.28.0.tar docker.io/calico/apiserver:v3.28.0
+          将镜像导入到K8s的命名空间：
+            sudo ctr -n k8s.io images import pod2daemon-flexvol:v3.28.0.tar
+            sudo ctr -n k8s.io images import typha:v3.28.0.tar
+            sudo ctr -n k8s.io images import cni:v3.28.0.tar 
+            sudo ctr -n k8s.io images import node:v3.28.0.tar 
+            sudo ctr -n k8s.io images import csi:v3.28.0.tar 
+            sudo ctr -n k8s.io images import kube-controllers:v3.28.0.tar
+            sudo ctr -n k8s.io images import node-driver-registrar:v3.28.0.tar
+            sudo ctr -n k8s.io images import apiserver:v3.28.0.tar
+          验证镜像是否导入成功：
+            sudo ctr -n k8s.io images list | grep pod2daemon-flexvol
+            sudo ctr -n k8s.io images list | grep typha:v3.28.0
+            sudo ctr -n k8s.io images list | grep cni:v3.28.0
+            sudo ctr -n k8s.io images list | grep node:v3.28.0
+            sudo ctr -n k8s.io images list | grep csi:v3.28.0
+            sudo ctr -n k8s.io images list | grep kube-controllers:v3.28.0
+            sudo ctr -n k8s.io images list | grep node-driver-registrar:v3.28.0
+            sudo ctr -n k8s.io images list | grep v3.28.0
+          显然这个方式十分的麻烦 所以我又通过其他方式修改了 containerd拉取镜像的方式
+          解决方式二： 参考链接：https://blog.csdn.net/IOT_AI/article/details/131975562
+
+       问题3：
+
+            
+            
+
+           
+        
+
       
 
      
