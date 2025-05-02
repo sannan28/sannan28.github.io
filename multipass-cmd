@@ -1,0 +1,10 @@
+multipass cmd
+官网命令参考链接 https://documentation.ubuntu.com/multipass/en/latest/reference/command-line-interface/
+写在前面我使用的 multipass的版本是 1.6.1  不同版本可能命令会有区别  
+1.multipass launch -n distributed-transation -c 2 -m 8G -d 30G   创建虚拟机 name-> distributed-transation cpu->2 memory ->8G disk-> 30G
+2.multipass list  虚拟机列表
+3.multipass delete distributed-transation 删除虚拟机 但是还可以恢复
+4.multipass purge      清理所有已经删除的实例
+5.multipass recover distributed-transation 恢复删除但是未清理的实例
+6.multipass info distributed-transation 查看虚拟机信息
+7.multipass exec distributed-transation pwd  外部执行实例内命令
