@@ -20,13 +20,69 @@
 4.sysstemctl stop docker
 
 
-
 # install mysql 8.0.9  （docker.io/library/mysql:8.0.19）
 1.docker pull mysql:8.0.19
 2.docker run --name mysql-8.0.19-p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql:8.0.19   
 3.create user 'nacos'@'%' identified by 'nacos';
 4.grant all privileges on *.* to 'nacos'@'%' identified by 'nacos';
 5.grant all privileges on *.* to 'nacos'@'%' with grant option;
-6.
+
+
+# install nacos 2.2.0
+# 拉取指定版本的Nacos镜像（v2.2.0）
+1.docker pull nacos/nacos-server:v2.2.0 (docker.io/nacos/nacos-server:v2.2.0)  
+# 创建日志和配置文件目录，用于容器数据持久化 这些目录将映射到容器内部，方便直接修改配置
+1.mkdir -p /mydata/nacos/logs/
+2.mkdir -p /mydata/nacos/conf/
+# 启动临时容器并复制配置文件
+1.docker run -d --name nacos-temp -p 8848:8848 nacos/nacos-server:v2.2.0   临时启动容器
+2.docker cp nacos-temp:/home/nacos/logs/ /mydata/nacos/  复制配置文件和日志
+3.docker cp nacos-temp:/home/nacos/conf/ /mydata/nacos/  复制配置文件和日志
+4.docker rm -f nacos-temp 移除临时容器
+# 初始化MySQL数据库
+1.创建数据库：在MySQL中新建数据库（如nacos-config）
+# 导入表结构：从Nacos官方GitHub仓库下载SQL脚本并执行  执行sql获取链接 https://github.com/alibaba/nacos/blob/2.2.0/distribution/conf/mysql-schema.sql
+2.source /path/to/mysql-schema.sql 
+# 启动Nacos容器并配置MySQL
+1.docker run -d --name nacos-2.2.0 -p 8848:8848 -p 9848:9848 -p 9849:9849 --privileged=true -e JVM_XMS=256m -e JVM_XMX=256m -e MODE=standalone -e SPRING_DATASOURCE_PLATFORM=mysql -e DB_NUM=1 -e DB_URL_0="jdbc:mysql://192.168.64.14:3307/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai" -e DB_USER=root -e DB_PASSWORD=root -v /mydata/nacos/logs/:/home/nacos/logs -v /mydata/nacos/conf/:/home/nacos/conf --restart=always nacos/nacos-server:v2.2.0
+# 修改配置文件
+1.vim /mydata/nacos/conf/application.properties
+# 更新以下配置项：
+spring.datasource.platform=mysql
+db.num=1
+db.url.0=jdbc:mysql://<MySQL_IP>:3306/nacos-config?characterEncoding=utf8&connectTimeout=1000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
+db.user=root
+db.password=your_password
+# 验证配置映射
+1.docker exec -it nacos cat /home/nacos/conf/application.properties
+# 防火墙与网络配置
+1.firewall-cmd --permanent --add-port={8848,9848,9849}/tcp
+2.firewall-cmd --reload
+3.systemctl restart docker  # 可选，确保Docker应用新规则
+# 访问Nacos控制台
+1.http://<宿主机IP>:8848/nacos/index.html  
+2.默认账号密码为 nacos/nacos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
