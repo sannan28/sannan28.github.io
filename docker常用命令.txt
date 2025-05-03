@@ -83,9 +83,6 @@ docker cp test:/home/nacos/logs/ /Users/lishengnan/docker-mount/docker-nacos-2.0
 docker cp test:/home/nacos/conf/ /Users/lishengnan/docker-mount/docker-nacos-2.0.4/
 
 
-
-docker run —name mysql-8.0.19 -d -p 3307:3306 mysql/mysql:8.0.19
-
 docker run --name mysql-8.0.1 -p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql/mysql:8.0.19
 
 
