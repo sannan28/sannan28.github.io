@@ -20,3 +20,13 @@
 4.sysstemctl stop docker
 
 
+
+# install mysql 8.0.9  （docker.io/library/mysql:8.0.19）
+1.docker pull mysql:8.0.19
+2.docker run --name mysql-8.0.19-p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql:8.0.19   
+3.create user 'nacos'@'%' identified by 'nacos';
+4.grant all privileges on *.* to 'nacos'@'%' identified by 'nacos';
+5.grant all privileges on *.* to 'nacos'@'%' with grant option;
+6.
+
+
