@@ -1,0 +1,9 @@
+mac pro 常用快捷键
+
+Option+command+p       获取当前文件所在的路径
+Command + Shift + .    快速显示隐藏文件
+
+
+
+mac pro 常用命令
+sudo /etc/hosts    修改hosts 文件
