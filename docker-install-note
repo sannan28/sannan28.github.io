@@ -74,7 +74,44 @@ db.password=your_password
 6.docker rm -f seata-temp
 7.创建数据库：在MySQL中新建名为 seata 的数据库
 8.导入表结构 参考链接：https://github.com/apache/incubator-seata/blob/1.6.1/script/server/db/mysql.sql
-9.配置注册中心和存储模式：
+9.修改 /opt/seata/config/resources下的 application的yaml文件，可以参考 application.example.yaml文件
+   需要修改的内容是：
+seata：
+  config:
+    type: nacos
+    nacos:
+      server-addr: 192.168.64.14:8848
+      namespace:
+      group: DEFAULT_GROUP
+      username: nacos
+      password: nacos
+      data-id: seataServer.properties
+
+registry:
+  type: nacos
+  nacos:
+    application: seata-server
+    server-addr: 192.168.64.14:8848
+    group: DEFAULT_GROUP
+    namespace:
+    username: nacos
+    password: nacos
+
+其中 data-id: seataServer.properties 这个配置文件 需要手动上传到nacos的配置中心 内容链接 https://github.com/apache/incubator-seata/blob/1.6.1/script/config-center/config.txt 
+然后修改配置中关于mysql的相关的配置 
+store.mode=db
+store.lock.mode=db
+store.session.mode=db
+# 数据库连接配置
+store.db.url=jdbc:mysql://192.168.64.14:3307/seata?characterEncoding=utf8&connectTimeout=10000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+store.db.user=root
+store.db.password=root
+
+9. docker run -d --name seata-1.6.1 -p 8091:8091 -e SEATA_IP=192.168.64.14 -e SEATA_CONFIG_NAME=file:/seata-server/resources/registry -v /opt/seata/config/resources:/seata-server/resources -v /opt/seata/logs:/root/logs/seata seataio/seata-server:1.6.1
+10.docker logs -f seata //验证部署
+
+以下11-12 步骤 可以忽略 但是内容先保存
+11.配置注册中心和存储模式：
     vim /opt/seata/config/resources/registry.conf
 
     registry {
@@ -97,7 +134,7 @@ config {
   }
 }
 
-10.配置MySQL持久化
+12.配置MySQL持久化
 
 wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.19/mysql-connector-java-8.0.19.jar -P /opt/seata/config/resources/
 
@@ -115,9 +152,6 @@ store {
     maxConn = 30
   }
 }
-
-11.docker run -d --name seata-1.6.1 -p 8091:8091 -e SEATA_IP=192.168.64.14 -e SEATA_CONFIG_NAME=file:/seata-server/resources/registry -v /opt/seata/config/resources:/seata-server/resources -v /opt/seata/logs:/root/logs/seata seataio/seata-server:1.6.1
-12.docker logs -f seata //验证部署
 
 
     
