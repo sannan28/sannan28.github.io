@@ -108,7 +108,7 @@ store {
     datasource = "druid"
     dbType = "mysql"
     driverClassName = "com.mysql.cj.jdbc.Driver"
-    url = "jdbc:mysql://192.168.64.14:3307/seata?characterEncoding=utf8&connectTimeout=1000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai"
+    url = "jdbc:mysql://192.168.64.14:3307/seata?characterEncoding=utf8&connectTimeout=10000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
     user = "root"        # MySQL用户名
     password = "root"  # MySQL密码
     minConn = 5
