@@ -1,0 +1,9 @@
+写在前面 关于seata的官方文档网址 ：https://seata.apache.org/zh-cn/docs/user/quickstart
+以下是我自己学习的笔记 
+
+
+仍然写在前面 使用的组件的版本信息 
+springcloudalibaba 2021.0.5.0 + springboot 2.6.13 + seata 1.6.1+ nacos 2.2.0 + mysql 8.0.19  关于版本对应的信息可以参考官方的版本 https://github.com/alibaba/spring-cloud-alibaba/wiki/%E7%89%88%E6%9C%AC%E8%AF%B4%E6%98%8E
+关于 mysql 、seata server、nacos 环境的搭建可以参考 我的这篇笔记 https://github.com/sannan28/sannan28.github.io/blob/main/docker-install-note
+
+然后接下来就是
