@@ -154,7 +154,7 @@ store {
 }
 
 
-install docker compose
+install docker compose 要考虑和docker 版本的兼容性 
 # 创建 Docker Compose 插件目录（如果不存在）
 1.mkdir -p ~/.docker/cli-plugins/
 # 下载并安装 Docker Compose v2.26.1
