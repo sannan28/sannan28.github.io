@@ -154,6 +154,18 @@ store {
 }
 
 
+install docker compose
+# 创建 Docker Compose 插件目录（如果不存在）
+1.mkdir -p ~/.docker/cli-plugins/
+# 下载并安装 Docker Compose v2.26.1
+2.curl -SL "https://github.com/docker/compose/releases/download/v2.26.1/docker-compose-linux-x86_64" -o ~/.docker/cli-plugins/docker-compose
+3.由于我的虚拟机 无法访问外网 所以我是先下载到本地  然后上传到虚拟机上的 所以直接下载更改名字(docker-compose-linux-x86_64-->docker-compose) 执行下面的命令 
+# 赋予执行权限
+4.chmod +x ~/.docker/cli-plugins/docker-compose
+# 验证安装
+5.docker compose version  输出应该显示 Docker Compose version v2.26.1
+
+
     
 
 
