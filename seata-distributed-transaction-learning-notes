@@ -1,9 +1,99 @@
-写在前面 关于seata的官方文档网址 ：https://seata.apache.org/zh-cn/docs/user/quickstart
-以下是我自己学习的笔记 
+写在前面 因为我是整体学习完后整理的笔记 在学习源码的过程中 我发现有必要去了解下AOP 会对seata分布式事务的实现理解的更好一点
 
 
-仍然写在前面 使用的组件的版本信息 
-springcloudalibaba 2021.0.5.0 + springboot 2.6.13 + seata 1.6.1+ nacos 2.2.0 + mysql 8.0.19  关于版本对应的信息可以参考官方的版本 https://github.com/alibaba/spring-cloud-alibaba/wiki/%E7%89%88%E6%9C%AC%E8%AF%B4%E6%98%8E
-关于 mysql 、seata server、nacos 环境的搭建可以参考 我的这篇笔记 https://github.com/sannan28/sannan28.github.io/blob/main/docker-install-note
+关于spring aop 底层实现原理：
+  就是面向切面编程，通过代理技术，在运行的时候为需要增强的目标对象创建一个代理对象，代理对象会拦截对目标方法的调用，在方法执行的前后插入一些额外的逻辑(事务，日志)。
+    bean的创建过程中有一个步骤可以对bean 进行扩展，aop 本身就是一个扩展功能， 所以在BeanPostProcessor的后置处理方法中来进行实现
+      1.代理对象的创建过程(advice，切面，切点)
+      2.通过 jdk 或者 cglib 的方式来生成带代理对象
+      3.在执行方法调用的时候，会调用生成的字节码文件中，直接找到DynamicAdvisoredInterceptor 类中的intercept方法，然后开始执行
+      4.根据之前定义好的通知来生成拦截器链
+      5.从拦截链中依次获取每一个通知开始进行执行，在执行的过程中，为了方便找到下一个通知是哪个，会有一个 找的时候是从-1的位置依次开始查找并执行。
 
-然后接下来就是
+spring的事务是如何回滚的？参考链接：https://www.cnblogs.com/java-wang/p/15635045.html 
+        spring的事务是由aop 来实现的,首先要是生成具体的代理对象，然后按照aop的整套流程来执行具体的业务操作逻辑，正常情况下要通过通知来完成核心功能，但是事务不是通过通知来实现的，而是通过一个TransactionInterceptor 来实现的，调用的invoke 来实现具体的逻辑。
+        1.先做准备工作，解析各个方法事务上相关的属性，根据具体的属性来判断是否开启新的事务
+        2.当要开启的时候，获取数据库的连接，关闭自动提交功能，开启事务。
+        3.执行具体的sql逻辑操作。
+        4.在操作的过程中，没有任何意外的情况发生，那么commitTransactionAfterReturning来完成的事务的提交工作，提交的具体逻辑是通过doCommit来实现的，实现的时候也是要获取连接，通过连接对象来提交。
+        5.如果发生异常，completeTransactionAfterThrowing 方法决定是否回滚，默认情况下 只有 RuntimeException 和 Error 会触发回滚，可通过 @Transactional(rollbackFor = Exception.class) 自定义回滚异常。实际回滚由事务管理器的 AbstractPlatformTransactionManager#processRollback 处理，JDBC 连接回滚：DataSourceTransactionManager。
+        6.当事务执行完毕之后，需要清除相关的事务信息 cleanupTransactionInfo。
+     
+  spring 事务的传播 包含哪些？
+     spring 的事务传播解决的是 处理多个事务方法相互调用时 如何传递的核心机制。核心思想就是：当一个事务方法调用另一个事务方法时，事务要如何协作，spring 为此定义了7种传播行为。
+     1.required 默认
+          行为：如果当前没有事务，新建一个事务 / 如果当前有事务(共用同一个事务)。
+          场景：订单服务调用库存服务，两个操作需要在同一个事务中，(要么都成功，要么都失败) 。
+                  最常见的默认选择，适用于绝大多数的场景。
+     2.supports
+          行为：如果当前有事务，加入事务/ 如果当前没有事务，就以非事务的方式执行。
+          场景：查询：如果调用方有事务(比如在修改操作中查询数据)，则加入事务保证一致性；如果单独调用，则无需事务。
+     3.mandatory 
+           行为：必须在一个已有的事务中运行，否则抛出异常。
+           场景：强制依赖事务的方法，比如资金操作，必须由外层事务控制，不可单独调用。
+     4.request_new 
+           行为：无论当前是否存在事务，总是会新建一个独立事务/如果当前有事务，挂起当前的事务，新事务执行完毕后恢复原事务。
+           场景：日志记录，即使主事务回滚，日志仍需记录(独立事务提交)。
+                    关键的区别：新事务和原事务完全独立，互不影响(但数据库锁可能会竞争)。
+     5.not_support 
+           行为：以非事务方式执行，如果当前有事务，挂起当前事务。
+           场景：非核心操作: 比如发送通知，不希望受事务的影响(j即使主事务回滚，通知仍需发送)。
+                    注意 ：可能会导致数据不一致。
+     6.never
+           行为：必须在非事务环境下执行，如果当前有事务，就抛出异常。
+           场景：强制非事务的方法，比如某些统计计算，明确禁止在事务中执行。
+      7.nested
+           行为：如果当前有事务，在嵌套事务(保存点)中执行/如果当前无事务，效果同request/嵌套事务回滚不影响外层事务，但是外层事务回滚会连带嵌套回滚。
+           场景：部分操作可独立回滚：比如下订单扣减库存，如果库存不足只回滚库存操作，不影响订单创建(需数据库支持保存点，如mysql的innodb)。
+
+接下来就进入正题 Apache Seata 一款开源的分布式事务解决方案 
+   关于seata的官方文档网址 ：https://seata.apache.org/zh-cn/docs/user/quickstart
+   在介绍 seata 分布式解决方案之前 需要介绍下 seata 的术语
+        TC (Transaction Coordinator) - 事务协调者 维护全局和分支事务的状态，驱动全局事务提交或回滚。
+        TM (Transaction Manager) - 事务管理器 定义全局事务的范围：开始全局事务、提交或回滚全局事务。
+        RM (Resource Manager) - 资源管理器 管理分支事务处理的资源，与TC 交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或者回滚。
+     seata支持的事务模式 分为 at tcc saga  xa
+         先来说明 at 模式 
+            at 模式是一种非侵入式的分布式事务解决方案，Seata在内部做了对数据库操作的代理层，我们使用seata at模式时 实际上使用的seata 自带的数据源代理DataSourceProxy, Seata 在这层代理中加入了很多逻辑，比如插入回滚 undo_log 日志，检查全局锁等。
+             使用的前提：
+                要求支持基于本地ACID事务关系型数据库
+                java应用，通过jdbc访问数据库
+             整体机制包含两个阶段：
+                 一阶段：业务数据和回滚日志记录在同一个本地事务中提交，释放本地事务锁以及连接资源。
+                 二阶段：提交->异步化，非常快速的完成
+                             回滚通过一阶段生成的回滚日志反向进行补偿。
+             具体的执行流程
+                以一个示例来展示整个流程 
+                   update product set name = “gts” where name = “txc”;
+                一阶段的过程：
+                   1.解析sql: 的到当前sql 执行的类型 update，表-> product，条件-> where name = “txc” 等相关的信息。
+                   2.查询前镜像：根据解析得到的条件信息，生成查询语句 -> select id,name,since from product where name = “txc”。
+                   3.执行业务sql：更新这条记录的name = gts.
+                   4.查询后镜像：根据查询前镜像返回结果，通过主键id=1 定位这条行数据。
+                   5.插入回滚日志：将查询前后镜像以及业务sql 相关的信息组成一条回滚日志记录，插入到undo_log表中。
+                   6.提交之前，向tc注册分支：申请product表中主键值为1的全局锁。
+                   7.本地事务提交：业务数据和undo_logy一并提交。
+                   8.将本地事务提交的结果上报给tc。
+                 二阶段的过程：
+                    如果是回滚：
+
+                    1.收到tc的分支回滚请求，开启一个本地事务，执行如下操作：
+                    2.通过xid 以及 branch id 查找相应的undo_log记录。
+                    3.数据校验：会使用undo_log 记录中的后查询镜像和当前镜像做比较，如果不同 说明数据被当前全局事务做了修改，这种情况 需要根据配置策略来处理。
+                    4.根据undo_log前查询镜像和业务sql相关信息生成并执行回滚语句。
+                    5.提交本地事务，并把本地事务的执行结果 上报给tc.
+                 
+                    如果提交：
+                      1.收到tc的分支提交请求，把请求放到一个异步的队列里，马上返回提交成功到tc。
+                      2.异步任务阶段的分支提交请求将异步和批量地删除相应的undo_log记录。
+
+      实战代码：
+        环境：springcloudalibaba 2021.0.5.0 + springboot 2.6.13 + seata 1.6.1 + nacos 2.2.0 + mysql 8.0.19  关于版本对应的信息可以参考官方的版本 https://github.com/alibaba/spring-cloud-alibaba/wiki/%E7%89%88%E6%9C%AC%E8%AF%B4%E6%98%8E
+        关于 mysql 、seata server、nacos 环境的搭建可以参考 我的这篇笔记 https://github.com/sannan28/sannan28.github.io/blob/main/docker-install-note
+        参考我的项目: https://github.com/sannan28/distributed-transaction  
+
+
+
+
+
+
