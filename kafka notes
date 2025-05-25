@@ -1,15 +1,79 @@
 1.
 
-2.kafka 生产者端是如何保证消息不重复的 
+2.kafka 生产者端是如何保证消息不重复的
+   一句话总结：
+     幂等性：通过 pid + partition + seqNumber 去重，解决单分区消息重复问题。
+     事务机制：通过原子提交以及read_commitited隔离级别，解决跨分区的重复和部分成功的问题。
    为什么消息会重复？
     1.生产者重试：网络波动时，已发送但未收到确认的消息会被重发。
     2.消费者重复消费：消费成功后 offset 未及时提交，消费者重启后重新消费。
+   什么样的消息属于重复的 判断的标准是什么 -> 标准就是:pid + partitopn + SeqNumber 
+     说明：那么 pid 代表的就是 producerId, kafka 但是每次重启都会重新分配一个新的producerId。
+          partition 代表的是分区号。
+          SeqNumber 序列号 生产者会给每一个消息贴的一个递增的编号 目的就是让消息有序。
+   broker是如何判断消息是否重复的呢？
+     broker broker 会在内存中维护一个pid+partition+seqNumer,如果接收到的消息比seqNumer>1 就存储消息，如果小于seqNumer 就说明消息重复;如果消息大于1 以上，就说明消息丢失了。就会抛异常。
+  幂等性:解决单分区内重复
+   而幂等的原理是什么呢？
+     开启幂等之后，
+       1.生产者会为每条消息附加一个pid 以及 seqNumber 以及 partition,
+       2.broker 会记录每个pid 在每个分区最新序列号。如果收到重复的序列号，直接丢弃。
+        所以幂等解决的就是 sender 到 broker 间。由于网络波动可能造成的重发问题。用幂等来标识唯一消息。
+    注意：幂等性只能保证的是在 单分区+单会话内 不重复。
+    场景示例：
+     生产者发送订单消息 订单A（PID=1, Seq=1）到 orders 主题的 Partition 0。
+     Broker 收到后记录 PID=1, Partition 0, Seq=1。
+     如果生产者未收到 ACK 并重发 订单A（PID=1, Seq=1），Broker 发现序列号已存在，直接丢弃重复消息。
+      效果：单分区内即使生产者重试，消息也不会重复。
 
-写在前面 这里有几个概念需要了解下
-   什么样的消息数据属于重复? pid + partitopn + SeqNumber
-     pid 代表的就是 producerId kafka 每次重启都会重新分配一个新的producerId
-     partition 代表的是分区号
-     SeqNumber 序列号 生产者会给每一个消息贴的一个递增的编号 目的就是让消息有序。
-broker是如何判断消息是否重复的呢？ broker 会在内存中维护一个pid+partition+seqNumer,如果接收到的消息比seqNumer>1 就存储消息，如果小于seqNumer 就说明消息重复;如果消息大于1 以上，就说明消息丢失了。就会抛异常。
-  所以幂等解决的就是 sender 到 broker 间。由于网络波动可能造成的重发问题。用幂等来标识唯一消息。
-    注意：并且幂等性只能保证的是在 单分区+单会话内 不重复。
+ 事务机制: 解决跨分区的原子性和重复
+   原理：
+     事务机制保证开启多个分区的操作是原子的(要么全成功，要么全失败)。
+     生产者开启事务后，所有的消息会暂时存储到事务日志中，提交时才会对消费者可见。
+   例子：
+    // 生产者代码示例
+   producer.beginTransaction();
+   try {
+      // 发送订单消息到 orders 主题的 Partition 0
+      producer.send(new ProducerRecord<>("orders", "订单A"));
+      // 发送库存扣减消息到 inventory 主题的 Partition 1
+      producer.send(new ProducerRecord<>("inventory", "扣减库存A"));
+      producer.commitTransaction(); // 提交事务
+      } catch (Exception e) {
+      producer.abortTransaction(); // 回滚事务
+    }
+   执行的过程:
+     1.事务开启后，两条消息会写入各自分区，但被标记为“未提交”（消费者不可见）。
+     2.提交事务时，Kafka 会写入一条 COMMIT 标记到事务日志。
+     3.消费者配置 isolation.level=read_committed 后，只会读取已提交的消息。
+   效果:
+    如果事务提交前生产者崩溃，所有消息会被回滚（消费者看不到）。
+    如果生产者重试并成功提交，消息只会被写入一次。
+其他问题的思考：
+   如果producer重新启动 那么还能保证消息不重复吗？ 若Producer重启，新的实例会检测到旧事务未完成并终止，避免消息重复。
+   消息重试后分区的选择？如果为启动幂等性,重试时可能因负载均衡策略变化，导致消息被发送到其他 Partition。启用幂等时， Producer 会严格确保消息发送到原 Partition，避免因分区切换导致重复。
+
+那么如何配置幂等以及事务
+   启用幂等
+     1.显式地将生产者客户端参数enable.idempotence设置为true,即可(这个参数的默认值为true)。
+     2.且还需要确保生产者客户端的retries、acks、max.in.filght.request.per.connection参数不被配置错，默认值就是对的
+   启用事务
+
+3.消息的顺序性
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
+     
