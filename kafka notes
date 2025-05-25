@@ -60,7 +60,10 @@
    启用事务
 
 3.消息的顺序性
-
+    消息在单分区内有序，多分区内无序，如果要对多分区排序，造成分区无法工作需要等待排序，浪费性能。
+      如果未开启幂等性，需要 max.in.flight.requests.per.connection 设置为1。
+      如果开启幂等性，需要 max.in.flight.requests.per.connection 设置为小于5。
+      这是因为broker端会缓存producer主题分区下的五个request，保证最近5个request是有序的。
     
 
 
