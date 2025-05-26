@@ -1,7 +1,45 @@
 参考资料:https://blog.csdn.net/weixin_46075832/article/details/126703474
-1.
+1.kafka的定义
+   Kafka传统定义：Kafka是一个分布式的基于发布/订阅模式的消息队列（MessageQueue），主要应用于大数据实时处理领域。
+      发布/订阅：消息的发布者不会将消息直接发送给特定的订阅者，而是将发布的消息分为不同的类别，订阅者只接收感兴趣的消息。
+   Kafka最新定义：Kafka是一个开源的分布式事件流平台（Event Streaming Platform），被数千家公司用于高性能数据管道、流分析、数据集成和关键任务应用。
+   消息队列：
+     目前企业中比较常见的消息队列产品主要有 Kafka、ActiveMQ 、RabbitMQ 、RocketMQ 等。在大数据场景主要采用 Kafka 作为消息队列。在 JavaEE 开发中主要采用 ActiveMQ、RabbitMQ、RocketMQ。
+   传统消息队列的应用场景
+     传统的消息队列的主要应用场景包括：缓存消峰、解耦和异步通信。
+     缓存削峰:有助于控制和优化数据流经过系统的速度，解决生产消息和消费处理速度不一致的情况。
+     解耦:允许你独立扩展或修改两边的处理过程，只要确保他们同样遵守同样的接口约束
+     异步通信:
+   消息队列的两种方式
+     点对点：
+     发布订阅
+      区别: 点对点消费 -> 消息只能发布到一个主题， 消费完成就删除消息，且只有一个消费者
+      发布订阅模式 -> 消息可以发布到多个主题， 消息一般保留七天，且有多个消费者
 
-2.kafka 生产者端是如何保证消息不重复的
+
+ 
+2.kafka 生产者
+   (1).生产者的发送原理:
+        在消息发送的过程中，涉及到两个线程，main线程和sender线程，其中main线程是消息的生产线程，而sender线程是jvm单例的线程，专门用于消息的发送。
+        在jvm的内存中开辟了一块缓存空间叫RecordAccumulator（消息累加器），用于将多条消息合并成一个批次，然后由sender线程发送给kafka集群。
+        我们的一条消息在生产过程会调用send方法然后经过拦截器经过序列化器，再经过分区器确定消息发送在具体topic下的哪个分区，然后发送到对应的消息累加器中，
+        消息累加器是多个双端队列。并且每个队列和主题分区都具有一一映射关系。消息在累加器中，进行合并，达到了对应的size（batch.size）或者等待超过对应的等待时间(linger.ms)，
+        都会触发sender线程的发送。sender线程有一个请求池，默认缓存五个请求（ max.in.flight.requests.per.connection ），发送消息后，会等待服务端的ack，如果没收到ack就会重试默认重试int最大值（ retries ）。
+        如果ack成功就会删除累加器中的消息批次，并相应到生产端。      
+   (2).关于生产者发送数据
+         需求：创建 Kafka 生产者，采用异步的方式发送到 Kafka Broker
+         1.普通发送
+         2.异步带回调的发送
+         3.同步发送API
+   (3).生产者拦截器
+   (4).生产者分区
+         从存储的角度 -> 合理使用存储资源，实现负载均衡
+         从计算的角度 -> 提高并行计算的可行性
+         Kafka支持三种分区策略 1) 指定分区； 2）指定key，计算hash得分区； 3）指定随机粘性分区；
+   (5).生产者提高吞吐量 -> 通过提高吞吐量达到低延迟的效果-> Batch.size 与 linger.ms 配合使用，根据生成数据的大小指定。RecordAccumlator：在异步发送并且分区很多的情况下，32M的数据量容易被满足，进程交互加大，可以适当提高到64M。
+        1.消息累加器（RecordAccumulator）
+            
+   (6).kafka 生产者端是如何保证消息不重复的
    一句话总结：
      幂等性：通过 pid + partition + seqNumber 去重，解决单分区消息重复问题。
      事务机制：通过原子提交以及read_commitited隔离级别，解决跨分区的重复和部分成功的问题。
@@ -60,13 +98,14 @@
      2.且还需要确保生产者客户端的retries、acks、max.in.filght.request.per.connection参数不被配置错，默认值就是对的
    启用事务
 
-3.消息的顺序性
+
+ (7).消息的顺序性
     消息在单分区内有序，多分区内无序，如果要对多分区排序，造成分区无法工作需要等待排序，浪费性能。
       如果未开启幂等性，需要 max.in.flight.requests.per.connection 设置为1。
       如果开启幂等性，需要 max.in.flight.requests.per.connection 设置为小于5。
       这是因为broker端会缓存producer主题分区下的五个request，保证最近5个request是有序的。
     
-4.broker
+3.broker
    1.副本的故障处理
        如果follower落后leader过多，体现在落后时间repca.lag.time.max.ms,follower就会被移除ISR队列,等待该队列LEO追上HW,才会重新加入ISR中。
        leo(log end offset):每个副本的最后一个offset,leo其实就是最新的offset+1。
