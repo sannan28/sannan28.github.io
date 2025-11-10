@@ -294,7 +294,7 @@ Kafka 在什么情况下会出现消息丢失？如何解决？
       问题在于：如果 Leader 副本在将消息同步给 Follower 副本之前就发生崩溃，而某个 Follower 被选举为新的 Leader，由于新的 Leader 没有那条消息，这条消息就永久丢失了。而生产者已经收到了成功确认，对此一无所知。
 4.生产者缓冲区已满或程序异常退出
       场景：消息产生的速度远大于发送到 Broker 的速度，导致生产者的内存缓冲区被填满。
-      原因：如果配置了 block.on.buffer.full=false（新版本是 max.block.ms），当缓冲区满时，新的 send() 调用会被立即抛出异常或放弃，导致消息丢失。如果生产者在缓冲区中的数据还未发送时就因为崩溃或强制杀死而退出，这些在内存中的消息也会全部丢失。
+      原因：如果配置了 block.on.buffer.full=false（新版本是 max.block.ms 最大阻塞时间（毫秒）），当缓冲区满时，新的 send() 调用会被立即抛出异常或放弃，导致消息丢失。如果生产者在缓冲区中的数据还未发送时就因为崩溃或强制杀死而退出，这些在内存中的消息也会全部丢失。
 
 1.生产者端的解决方案：
    必须使用异步回调：调用 send() 方法时，注册一个回调函数来处理结果。
@@ -321,7 +321,7 @@ Kafka 在什么情况下会出现消息丢失？如何解决？
 2.Broker 端消息丢失
    Broker 是消息的存储方，其可靠性依赖于 Kafka 的副本机制。
      1.丢失场景与原因：
-         min.insync.replicas 配置不合理
+         min.insync.replicas （最小同步副本数）配置不合理
          场景：你的 Topic 有 3 个副本，但 min.insync.replicas 设置为 1。
          原因：即使生产者配置了 acks=all，这个参数的含义是“定义确认为消息写入成功所需的最少 ISR 副本数”。如果设置为 1，那么只要 Leader 在 ISR 中，写入就成功。这其实和 acks=1 的风险一样：如果 Leader 在同步给其他副本前崩溃，消息依然会丢失。
          配合使用：acks=all 必须与 min.insync.replicas >= 2 配合使用。例如，有 3 个副本，设置 min.insync.replicas=2。这样，生产者发送消息时，必须至少有一个 Leader 和一个 Follower 确认，消息才算提交。即使 Leader 立刻崩溃，消息也已经存在于另一个副本上，不会丢失。
@@ -331,11 +331,11 @@ Kafka 在什么情况下会出现消息丢失？如何解决？
      3.数据未刷盘（Flush）
          场景：Broker 收到消息后，先写入操作系统页缓存（Page Cache），默认情况下由操作系统决定何时将数据刷到磁盘。
          原因：如果 Broker 所在机器突然断电，所有在页缓存中未刷盘的数据都会丢失。虽然 Kafka 依赖高效的页缓存机制，但在极端物理故障下，这仍然是一个风险点。
-         解决方案：可以配置 log.flush.interval.messages 和 log.flush.interval.ms 来强制更频繁地刷盘，但这会严重牺牲性能，通常不推荐。依赖带备用电源的 RAID 卡或 UPS 是更好的硬件解决方案。
+         解决方案：可以配置 log.flush.interval.messages（日志刷新消息间隔 通常指日志段刷新消息条数间隔） 和 log.flush.interval.ms（日志刷新间隔（毫秒） 通常指日志段刷新时间间隔） 来强制更频繁地刷盘，但这会严重牺牲性能，通常不推荐。依赖带备用电源的 RAID 卡或 UPS 是更好的硬件解决方案。
       Broker 端的解决方案：
          保证副本数量：为重要的 Topic 设置 replication.factor >= 3。
          合理配置 min.insync.replicas：根据副本数量设置，通常建议 min.insync.replicas = replication.factor - 1（例如 3 副本设置为 2）。这保证了即使一台 Broker 宕机，仍然能满足最小同步副本数。
-         启用 unclean.leader.election.enable = false：禁止非 ISR 中的副本被选举为 Leader。这可以防止上述因 ISR 收缩导致的数据丢失，但代价是如果所有 ISR 副本都宕机，Topic 将不可用，需要在可用性和一致性之间权衡。
+         启用 unclean.leader.election.enable = false（是否允许非清洁领导者选举 不清洁领导者选举开关）：禁止非 ISR 中的副本被选举为 Leader。这可以防止上述因 ISR 收缩导致的数据丢失，但代价是如果所有 ISR 副本都宕机，Topic 将不可用，需要在可用性和一致性之间权衡。
 
 3. 消费者端消息丢失
    消费者端丢失消息通常是因为错误地处理了位移（Offset）提交。
@@ -381,7 +381,7 @@ Kafka 在什么情况下会出现消息丢失？如何解决？
 总结：要最大限度地防止 Kafka 消息丢失，需要三管齐下：
    
     生产者  -> acks=all + retries（较大值）+ 异步回调处理错误                                                  ->  确保消息成功送达 Broker 并得到多个副本确认。
-    Broker -> replication.factor >= 3 + min.insync.replicas >= 2 + unclean.leader.election.enable=false  -> 确保消息在 Broker 集群中有足够的冗余，并防止脑裂导致的数据不一致。
+    Broker -> replication.factor（副本因子 也常称为 复制因子 或 副本数） >= 3 + min.insync.replicas >= 2 + unclean.leader.election.enable=false  -> 确保消息在 Broker 集群中有足够的冗余，并防止脑裂导致的数据不一致。
     消费者  -> enable.auto.commit=false + 处理完消息后再手动提交位移 + 实现业务逻辑幂等                          -> 确保消息被成功处理后才更新消费进度，并能容忍重复消费。
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
